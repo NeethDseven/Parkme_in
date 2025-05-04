@@ -91,7 +91,7 @@ include_once BASE_PATH . '/app/views/includes/header.php';
         window.onload = function() {
             setTimeout(function() {
                 window.print();
-            }, 500);
+            }, 1000);
         };
     </script>
 </body>

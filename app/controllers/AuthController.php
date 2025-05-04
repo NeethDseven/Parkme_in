@@ -58,41 +58,69 @@ class AuthController extends BaseController {
         include 'app/views/auth/login.php';
     }
     
+    /**
+     * Traitement du formulaire d'inscription
+     */
     public function register() {
-        $error = null;
-        $success = null;
+        // Vérifier si l'utilisateur est déjà connecté
+        if (isset($_SESSION['user_id'])) {
+            $this->redirect('dashboard', 'index');
+            return;
+        }
+        
+        $error = '';
+        $success = '';
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $nom = isset($_POST['nom']) ? htmlspecialchars(trim($_POST['nom'])) : '';
-            $prenom = isset($_POST['prenom']) ? htmlspecialchars(trim($_POST['prenom'])) : '';
-            $email = isset($_POST['email']) ? trim(filter_input(INPUT_POST, 'email', FILTER_SANITIZE_EMAIL)) : '';
+            // Récupérer et nettoyer les données du formulaire
+            $nom = isset($_POST['nom']) ? trim($_POST['nom']) : '';
+            $prenom = isset($_POST['prenom']) ? trim($_POST['prenom']) : '';
+            $email = isset($_POST['email']) ? trim($_POST['email']) : '';
             $password = isset($_POST['password']) ? $_POST['password'] : '';
             $confirm_password = isset($_POST['confirm_password']) ? $_POST['confirm_password'] : '';
+            $telephone = isset($_POST['telephone']) ? trim($_POST['telephone']) : '';
+            $terms = isset($_POST['terms']) ? true : false;
             
-            if (empty($nom) || empty($prenom) || empty($email) || empty($password) || empty($confirm_password)) {
-                $error = "Tous les champs sont obligatoires.";
-            } else if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                $error = "Format d'email invalide.";
-            } else if (strlen($password) < 6) {
-                $error = "Le mot de passe doit contenir au moins 6 caractères.";
-            } else if ($password !== $confirm_password) {
+            // Validation des données
+            if (empty($nom) || empty($prenom) || empty($email) || empty($password)) {
+                $error = "Tous les champs obligatoires doivent être remplis.";
+            } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $error = "L'adresse email n'est pas valide.";
+            } elseif (strlen($password) < 8) {
+                $error = "Le mot de passe doit comporter au moins 8 caractères.";
+            } elseif ($password !== $confirm_password) {
                 $error = "Les mots de passe ne correspondent pas.";
+            } elseif (!$terms) {
+                $error = "Vous devez accepter les conditions générales.";
+            } elseif (User::emailExists($email)) {
+                $error = "Cette adresse email est déjà utilisée.";
             } else {
-                $existingUser = User::findByEmail($email);
+                // Hacher le mot de passe
+                $password_hash = password_hash($password, PASSWORD_DEFAULT);
                 
-                if ($existingUser) {
-                    $error = "Cet email est déjà utilisé.";
+                // Créer le nouvel utilisateur
+                $userId = User::create($nom, $prenom, $email, $password_hash, $telephone);
+                
+                if ($userId) {
+                    // Créer une notification de bienvenue pour l'utilisateur
+                    require_once 'app/models/Notification.php';
+                    $message = "Bienvenue sur ParkMeIn, " . $prenom . " ! Votre compte a été créé avec succès.";
+                    Notification::create($userId, $message, 'info');
+                    
+                    $success = "Votre compte a été créé avec succès ! Vous pouvez maintenant vous connecter.";
+                    
+                    // Rediriger vers la page de connexion après 3 secondes
+                    header("refresh:3;url=index.php?controller=auth&action=login");
                 } else {
-                    if (User::createUser($nom, $prenom, $email, $password)) {
-                        $success = "Inscription réussie ! Vous pouvez maintenant vous connecter.";
-                    } else {
-                        $error = "Erreur lors de l'inscription. Veuillez réessayer.";
-                    }
+                    $error = "Une erreur s'est produite lors de la création de votre compte. Veuillez réessayer.";
                 }
             }
         }
         
-        $this->render('auth/register', ['error' => $error, 'success' => $success]);
+        $this->render('auth/register', [
+            'error' => $error,
+            'success' => $success
+        ]);
     }
 
     /**
@@ -124,12 +152,5 @@ class AuthController extends BaseController {
         header("Location: /projet/Parkme_in-master/");
         exit;
     }
-
-    /*
-    public function processLogin()
-    {
-        // Code de processLogin...
-    }
-    */
 }
 ?>

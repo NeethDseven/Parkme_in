@@ -1,142 +1,141 @@
 <?php
-
 class BaseController {
     /**
-     * Renders a view with the provided data
-     * Automatically includes header and footer
+     * Charge et affiche une vue
      *
-     * @param string $view The view path relative to app/views/
-     * @param array $data Data to be extracted and passed to the view
+     * @param string $view Chemin de la vue à charger
+     * @param array $data Variables à passer à la vue
      */
     protected function render($view, $data = []) {
-        // Extract data to make variables available in the view
-        if (!empty($data)) {
-            extract($data);
-        }
+        // Extraire les données pour les rendre accessibles dans la vue
+        extract($data);
         
-        // Define the base path for includes and assets
-        if (!defined('BASE_PATH')) {
-            define('BASE_PATH', dirname(dirname(__FILE__)));
-        }
+        // Construire le chemin complet vers la vue
+        $viewFile = 'app/views/' . $view . '.php';
         
-        // Define a base URL for links
-        if (!defined('BASE_URL')) {
-            $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https://' : 'http://';
-            $host = $_SERVER['HTTP_HOST'];
-            $script = dirname($_SERVER['SCRIPT_NAME']);
-            define('BASE_URL', $protocol . $host . $script);
-        }
-        
-        // Include header
-        include BASE_PATH . '/app/views/includes/header.php';
-        
-        // Include the view file
-        $viewPath = BASE_PATH . '/app/views/' . $view . '.php';
-        if (file_exists($viewPath)) {
-            include $viewPath;
+        // Vérifier si le fichier de vue existe
+        if (file_exists($viewFile)) {
+            // Inclure la vue
+            require_once $viewFile;
         } else {
-            // Handle case when view doesn't exist
-            echo "Error: View file not found: {$viewPath}";
+            // Afficher une erreur si la vue n'existe pas
+            throw new Exception("Vue non trouvée: {$viewFile}");
         }
-        
-        // Include footer
-        include BASE_PATH . '/app/views/includes/footer.php';
     }
     
     /**
-     * Renders a view without header and footer
+     * Redirige vers une autre action/contrôleur
      *
-     * @param string $view The view path relative to app/views/
-     * @param array $data Data to be extracted and passed to the view
+     * @param string $controller Nom du contrôleur
+     * @param string $action Nom de l'action
+     * @param array $params Paramètres supplémentaires
      */
-    protected function renderPartial($view, $data = []) {
-        // Extract data to make variables available in the view
-        if (!empty($data)) {
-            extract($data);
+    protected function redirect($controller, $action = 'index', $params = []) {
+        $url = 'index.php?controller=' . $controller . '&action=' . $action;
+        
+        // Ajouter les paramètres supplémentaires s'il y en a
+        if (!empty($params)) {
+            foreach ($params as $key => $value) {
+                $url .= '&' . $key . '=' . urlencode($value);
+            }
         }
         
-        // Define the base path for includes and assets
-        if (!defined('BASE_PATH')) {
-            define('BASE_PATH', dirname(dirname(__FILE__)));
-        }
-        
-        // Include the view file
-        $viewPath = BASE_PATH . '/app/views/' . $view . '.php';
-        if (file_exists($viewPath)) {
-            include $viewPath;
-        } else {
-            // Handle case when view doesn't exist
-            echo "Error: View file not found: {$viewPath}";
-        }
+        // Rediriger
+        header('Location: ' . $url);
+        exit;
     }
     
     /**
-     * Rediriger vers une autre page
+     * Vérifie si l'utilisateur est connecté
      *
-     * @param string $controller Contrôleur
-     * @param string $action Action
-     * @return void
-     */
-    protected function redirect($controller, $action = 'index') {
-        header("Location: index.php?controller=$controller&action=$action");
-        exit();
-    }
-    
-    /**
-     * Vérifier si l'utilisateur est connecté
-     *
-     * @return bool
+     * @return bool True si l'utilisateur est connecté, false sinon
      */
     protected function isLoggedIn() {
-        session_start();
+        if (session_status() == PHP_SESSION_NONE) {
+            session_start();
+        }
+        
         return isset($_SESSION['user_id']);
     }
     
     /**
-     * Vérifier si l'utilisateur est un administrateur
+     * Vérifie si l'utilisateur est administrateur
      *
-     * @return bool
+     * @return bool True si l'utilisateur est administrateur, false sinon
      */
     protected function isAdmin() {
         if (session_status() == PHP_SESSION_NONE) {
             session_start();
         }
         
-        // Déboguer le rôle dans la session
-        error_log("Rôle utilisateur : " . ($_SESSION['user_role'] ?? 'non défini'));
-        
         return isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'admin';
     }
     
     /**
-     * Protéger une page pour les utilisateurs connectés uniquement
+     * Envoi une réponse JSON
      *
-     * @return void
+     * @param mixed $data Données à envoyer au format JSON
+     * @param int $statusCode Code HTTP (par défaut 200)
      */
-    protected function requireLogin() {
-        if (session_status() == PHP_SESSION_NONE) {
-            session_start();
-        }
-        
-        if (!isset($_SESSION['user_id'])) {
-            header("Location: index.php?controller=auth&action=login");
-            exit();
-        }
+    protected function sendJson($data, $statusCode = 200) {
+        http_response_code($statusCode);
+        header('Content-Type: application/json');
+        echo json_encode($data);
+        exit;
     }
     
     /**
-     * Protéger une page pour les administrateurs uniquement
+     * Valide les champs d'un formulaire
      *
-     * @return void
+     * @param array $rules Règles de validation
+     * @param array $data Données à valider
+     * @return array Tableau des erreurs (vide si aucune erreur)
      */
-    protected function requireAdmin() {
-        if (!$this->isAdmin()) {
-            // Afficher un message d'erreur pour le débogage
-            echo "Accès refusé : Vous n'êtes pas administrateur. ";
-            echo "Role dans la session: " . ($_SESSION['user_role'] ?? 'non défini');
-            echo "<br><a href='index.php?controller=dashboard'>Retour au tableau de bord</a>";
-            exit();
+    protected function validate($rules, $data) {
+        $errors = [];
+        
+        foreach ($rules as $field => $rule) {
+            $value = isset($data[$field]) ? $data[$field] : null;
+            
+            // Règle required
+            if (strpos($rule, 'required') !== false && empty($value)) {
+                $errors[$field] = "Le champ {$field} est requis.";
+                continue;
+            }
+            
+            // Si le champ est vide et n'est pas requis, on passe à la règle suivante
+            if (empty($value)) {
+                continue;
+            }
+            
+            // Règle email
+            if (strpos($rule, 'email') !== false && !filter_var($value, FILTER_VALIDATE_EMAIL)) {
+                $errors[$field] = "Le champ {$field} doit être une adresse email valide.";
+            }
+            
+            // Règle min
+            if (preg_match('/min:(\d+)/', $rule, $matches)) {
+                $min = (int) $matches[1];
+                if (strlen($value) < $min) {
+                    $errors[$field] = "Le champ {$field} doit contenir au moins {$min} caractères.";
+                }
+            }
+            
+            // Règle numeric
+            if (strpos($rule, 'numeric') !== false && !is_numeric($value)) {
+                $errors[$field] = "Le champ {$field} doit être un nombre.";
+            }
+            
+            // Règle date
+            if (strpos($rule, 'date') !== false) {
+                $date = date_create($value);
+                if (!$date) {
+                    $errors[$field] = "Le champ {$field} doit être une date valide.";
+                }
+            }
         }
+        
+        return $errors;
     }
 }
 ?>

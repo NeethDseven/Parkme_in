@@ -1,344 +1,346 @@
 <?php
 require_once __DIR__ . '/../../core/Model.php';
+require_once __DIR__ . '/../../app/models/Database.php';
 
-/**
- * ParkingSpot Model
- * 
- * This class represents the ParkingSpot model to handle parking spot-related data and operations
- */
 class ParkingSpot extends Model {
-    // Properties
+    // Propriétés
     public $id;
-    public $parking_id;
     public $numero;
-    public $etage;
     public $type;
     public $statut;
-    public $numero_place;
-    public $tarif_horaire; // Ajout de la propriété manquante qui causait les avertissements
+    public $parking_id;
     
     protected static $table = 'places_parking';
     
-    private $db;
-
     /**
-     * Constructor - initialize database connection
-     */
-    public function __construct()
-    {
-        $this->db = Database::getInstance();
-    }
-
-    /**
-     * Get all parking spots
-     * 
-     * @return array Array of parking spot data
-     */
-    public function getAllSpots()
-    {
-        $query = "SELECT * FROM parking_spots";
-        return $this->db->query($query);
-    }
-
-    /**
-     * Get parking spots by parking ID
-     * 
-     * @param int $parkingId Parking ID
-     * @return array Array of parking spot data
-     */
-    public function getSpotsByParkingId($parkingId)
-    {
-        $query = "SELECT * FROM parking_spots WHERE parking_id = :parking_id";
-        return $this->db->query($query, ['parking_id' => $parkingId]);
-    }
-
-    /**
-     * Get parking spot by ID
-     * 
-     * @param int $id Parking spot ID
-     * @return array|bool Parking spot data or false if not found
-     */
-    public function getSpotById($id)
-    {
-        // Use integer casting to avoid parameter binding issues
-        $id = (int)$id;
-        
-        // Try to get from emplacements table first
-        $query = "SELECT * FROM emplacements WHERE id = $id";
-        $result = $this->db->query($query)->fetch(PDO::FETCH_ASSOC);
-        
-        // If not found, try the parking_spots table
-        if (!$result) {
-            $query = "SELECT * FROM parking_spots WHERE id = $id";
-            $result = $this->db->query($query)->fetch(PDO::FETCH_ASSOC);
-        }
-        
-        return $result;
-    }
-
-    /**
-     * Check if a parking spot is available for a specific time period
+     * Récupérer toutes les places de parking
      *
-     * @param int $spotId The parking spot ID
-     * @param string $startDate Start date and time
-     * @param string $endDate End date and time
-     * @return bool True if available, false if occupied
+     * @return array Liste des places de parking
      */
-    public function isAvailable($spotId, $startDate, $endDate)
-    {
-        $query = "SELECT COUNT(*) as count FROM reservations 
-                 WHERE spot_id = :spot_id 
-                 AND NOT (end_time <= :start_time OR start_time >= :end_time)";
-                 
-        $result = $this->db->query($query, [
-            'spot_id' => $spotId,
-            'start_time' => $startDate,
-            'end_time' => $endDate
-        ])->fetch();
-        
-        return $result['count'] == 0;
-    }
-
-    /**
-     * Get available parking spots by parking ID
-     * 
-     * @param int $parkingId Parking ID
-     * @param string $startDate Optional start date to check availability
-     * @param string $endDate Optional end date to check availability
-     * @return array Array of available parking spots
-     */
-    public static function getAvailableByParkingId($parkingId)
-    {
-        $db = Database::getInstance();
-        $conn = $db->getConnection();
-        
-        $stmt = $conn->prepare("SELECT * FROM places_parking WHERE parking_id = :parking_id AND statut = 'disponible'");
-        $stmt->bindParam(':parking_id', $parkingId, PDO::PARAM_INT);
-        $stmt->execute();
-        
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
-
-    /**
-     * Get available parking spots by parking ID with pagination
-     * 
-     * @param int $parkingId Parking ID
-     * @param int $page Current page number (default 1)
-     * @param int $itemsPerPage Number of items per page (default 10)
-     * @param string $startDate Optional start date to check availability
-     * @param string $endDate Optional end date to check availability
-     * @return array Array containing 'spots', 'total', 'totalPages', 'currentPage'
-     */
-    public static function getAvailableByParkingIdPaginated($parkingId, $page = 1, $itemsPerPage = 10, $startDate = null, $endDate = null)
-    {
-        $db = Database::getInstance();
-        
-        // Convert params to integers for security
-        $parkingId = (int)$parkingId;
-        $page = (int)$page;
-        $itemsPerPage = (int)$itemsPerPage;
-        
-        // Ensure page is at least 1
-        if ($page < 1) {
-            $page = 1;
-        }
-        
-        // Calculate offset for pagination
-        $offset = ($page - 1) * $itemsPerPage;
-        
-        try {
-            // Get total count for pagination
-            $countQuery = "SELECT COUNT(*) as total FROM emplacements WHERE parking_id = $parkingId";
-            $countResult = $db->query($countQuery)->fetch(PDO::FETCH_ASSOC);
-            $total = $countResult['total'];
-            
-            // Calculate total pages
-            $totalPages = ceil($total / $itemsPerPage);
-            
-            // Query with pagination
-            $query = "SELECT * FROM emplacements WHERE parking_id = $parkingId LIMIT $itemsPerPage OFFSET $offset";
-            $statement = $db->query($query);
-            $spots = $statement->fetchAll(PDO::FETCH_ASSOC);
-            
-            // If dates are provided, filter for availability
-            if ($startDate !== null && $endDate !== null) {
-                // This would filter the results based on availability
-                // Would need to implement actual availability logic
-            }
-            
-            // Return data with pagination information
-            return [
-                'spots' => $spots,
-                'total' => $total,
-                'totalPages' => $totalPages,
-                'currentPage' => $page
-            ];
-            
-        } catch (Exception $e) {
-            // Return empty result with pagination structure on error
-            return [
-                'spots' => [],
-                'total' => 0,
-                'totalPages' => 0,
-                'currentPage' => $page
-            ];
-        }
-    }
-
-    /**
-     * Generates pagination links HTML
-     *
-     * @param int $currentPage Current page number
-     * @param int $totalPages Total number of pages
-     * @param string $baseUrl Base URL for pagination links
-     * @return string HTML for pagination controls
-     */
-    public static function generatePaginationLinks($currentPage, $totalPages, $baseUrl)
-    {
-        if ($totalPages <= 1) {
-            return ''; // No pagination needed
-        }
-        
-        $links = '<ul class="pagination">';
-        
-        // Previous button
-        if ($currentPage > 1) {
-            $links .= '<li class="page-item"><a class="page-link" href="' . $baseUrl . '?page=' . ($currentPage - 1) . '">Précédent</a></li>';
-        } else {
-            $links .= '<li class="page-item disabled"><a class="page-link">Précédent</a></li>';
-        }
-        
-        // Page numbers
-        $startPage = max(1, $currentPage - 2);
-        $endPage = min($totalPages, $startPage + 4);
-        
-        if ($startPage > 1) {
-            $links .= '<li class="page-item"><a class="page-link" href="' . $baseUrl . '?page=1">1</a></li>';
-            if ($startPage > 2) {
-                $links .= '<li class="page-item disabled"><a class="page-link">...</a></li>';
-            }
-        }
-        
-        for ($i = $startPage; $i <= $endPage; $i++) {
-            if ($i == $currentPage) {
-                $links .= '<li class="page-item active"><a class="page-link">' . $i . '</a></li>';
-            } else {
-                $links .= '<li class="page-item"><a class="page-link" href="' . $baseUrl . '?page=' . $i . '">' . $i . '</a></li>';
-            }
-        }
-        
-        if ($endPage < $totalPages) {
-            if ($endPage < $totalPages - 1) {
-                $links .= '<li class="page-item disabled"><a class="page-link">...</a></li>';
-            }
-            $links .= '<li class="page-item"><a class="page-link" href="' . $baseUrl . '?page=' . $totalPages . '">' . $totalPages . '</a></li>';
-        }
-        
-        // Next button
-        if ($currentPage < $totalPages) {
-            $links .= '<li class="page-item"><a class="page-link" href="' . $baseUrl . '?page=' . ($currentPage + 1) . '">Suivant</a></li>';
-        } else {
-            $links .= '<li class="page-item disabled"><a class="page-link">Suivant</a></li>';
-        }
-        
-        $links .= '</ul>';
-        
-        return $links;
-    }
-
-    /**
-     * Update the status of a parking spot
-     * 
-     * @param int $id ID de la place
-     * @param string $status Nouveau statut
-     * @return bool Succès ou échec
-     */
-    public static function updateStatus($id, $status)
-    {
+    public static function findAll() {
         $db = Database::getInstance();
         $conn = $db->getConnection();
         
         try {
-            $stmt = $conn->prepare("UPDATE places_parking SET statut = :statut WHERE id = :id");
-            $stmt->bindParam(':statut', $status);
-            $stmt->bindParam(':id', $id, PDO::PARAM_INT);
-            return $stmt->execute();
+            $stmt = $conn->query("SELECT * FROM places_parking ORDER BY numero");
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (PDOException $e) {
-            error_log("Erreur lors de la mise à jour du statut de la place de parking: " . $e->getMessage());
-            return false;
+            error_log("Error in findAll places: " . $e->getMessage());
+            return [];
         }
     }
-
+    
     /**
-     * Trouve une place de parking par son ID
+     * Récupérer une place de parking par son ID
      *
      * @param int $id ID de la place de parking
-     * @return ParkingSpot|null L'objet place de parking ou null si non trouvé
+     * @return object|null Objet ParkingSpot ou null si non trouvé
      */
     public static function findById($id) {
         $db = Database::getInstance();
         $conn = $db->getConnection();
         
-        $stmt = $conn->prepare("SELECT * FROM places_parking WHERE id = :id");
-        $stmt->bindParam(':id', $id, PDO::PARAM_INT);
-        $stmt->execute();
-        
-        $data = $stmt->fetch(PDO::FETCH_ASSOC);
-        if (!$data) {
+        try {
+            $stmt = $conn->prepare("SELECT * FROM places_parking WHERE id = :id");
+            $stmt->bindParam(':id', $id, PDO::PARAM_INT);
+            $stmt->execute();
+            
+            $data = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$data) {
+                return null;
+            }
+            
+            $spot = new self();
+            foreach ($data as $key => $value) {
+                $spot->$key = $value;
+            }
+            
+            return $spot;
+        } catch (PDOException $e) {
+            error_log("Error in findById: " . $e->getMessage());
             return null;
         }
-        
-        $spot = new ParkingSpot();
-        foreach ($data as $key => $value) {
-            $spot->$key = $value;
-        }
-        
-        // Ajout de la propriété tarif_horaire
-        $spot->tarif_horaire = $data['tarif_horaire'];
-        
-        return $spot;
     }
     
     /**
-     * Marque une place de parking comme libre
+     * Récupérer les places de parking disponibles pour un parking donné
      *
-     * @return bool Succès ou échec de l'opération
+     * @param int $parkingId ID du parking
+     * @return array Liste des places disponibles
      */
-    public function markAsFree() {
-        $this->statut = 'disponible';
+    public static function getAvailableByParkingId($parkingId) {
         $db = Database::getInstance();
         $conn = $db->getConnection();
         
         try {
-            $stmt = $conn->prepare("UPDATE places_parking SET statut = :statut WHERE id = :id");
-            $stmt->bindParam(':statut', $this->statut);
-            $stmt->bindParam(':id', $this->id, PDO::PARAM_INT);
-            return $stmt->execute();
+            // On récupère toutes les places qui ne sont pas hors service
+            // Les places occupées sont incluses car elles peuvent être réservées pour des dates futures
+            $stmt = $conn->prepare("
+                SELECT * FROM places_parking
+                WHERE parking_id = :parking_id 
+                AND statut != 'hors_service'
+                ORDER BY numero
+            ");
+            $stmt->bindParam(':parking_id', $parkingId, PDO::PARAM_INT);
+            $stmt->execute();
+            
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (PDOException $e) {
-            error_log("Erreur lors de la mise à jour du statut de la place de parking: " . $e->getMessage());
+            error_log("Error in getAvailableByParkingId: " . $e->getMessage());
+            return [];
+        }
+    }
+    
+    /**
+     * Récupérer toutes les places d'un parking
+     *
+     * @param int $parkingId ID du parking
+     * @return array Liste des places
+     */
+    public static function getAllByParkingId($parkingId) {
+        $db = Database::getInstance();
+        $conn = $db->getConnection();
+        
+        try {
+            $stmt = $conn->prepare("
+                SELECT * FROM places_parking
+                WHERE parking_id = :parking_id
+                ORDER BY numero
+            ");
+            $stmt->bindParam(':parking_id', $parkingId, PDO::PARAM_INT);
+            $stmt->execute();
+            
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            error_log("Error in getAllByParkingId: " . $e->getMessage());
+            return [];
+        }
+    }
+    
+    /**
+     * Récupérer les places de parking disponibles pour une période donnée
+     *
+     * @param int $parkingId ID du parking
+     * @param string $startDate Date de début (format Y-m-d H:i:s)
+     * @param string $endDate Date de fin (format Y-m-d H:i:s)
+     * @return array Liste des places disponibles
+     */
+    public static function getAvailableSpotsByPeriod($parkingId, $startDate, $endDate) {
+        $db = Database::getInstance();
+        $conn = $db->getConnection();
+        
+        try {
+            // Ajout de logs de debug
+            error_log("Recherche de places pour parking ID: {$parkingId}, début: {$startDate}, fin: {$endDate}");
+            
+            // 1. Récupérer toutes les places du parking
+            $queryAllSpots = "SELECT * FROM places_parking WHERE parking_id = :parking_id AND statut != 'hors_service'";
+            $stmtAllSpots = $conn->prepare($queryAllSpots);
+            $stmtAllSpots->bindParam(':parking_id', $parkingId, PDO::PARAM_INT);
+            $stmtAllSpots->execute();
+            $allSpots = $stmtAllSpots->fetchAll(PDO::FETCH_ASSOC);
+            
+            error_log("Nombre total de places trouvées dans le parking: " . count($allSpots));
+            
+            $availableSpots = [];
+            
+            // 2. Vérifier individuellement la disponibilité de chaque place
+            foreach ($allSpots as $spot) {
+                // Requête pour vérifier les conflits de réservations
+                $queryConflicts = "
+                    SELECT COUNT(*) as count 
+                    FROM reservations 
+                    WHERE emplacement_id = :spot_id 
+                    AND statut IN ('en_attente', 'confirmée') 
+                    AND (
+                        (date_debut < :end_date AND date_fin > :start_date)
+                    )
+                ";
+                
+                $stmtConflicts = $conn->prepare($queryConflicts);
+                $stmtConflicts->bindParam(':spot_id', $spot['id'], PDO::PARAM_INT);
+                $stmtConflicts->bindParam(':start_date', $startDate);
+                $stmtConflicts->bindParam(':end_date', $endDate);
+                $stmtConflicts->execute();
+                
+                $result = $stmtConflicts->fetch(PDO::FETCH_ASSOC);
+                
+                // Si aucun conflit, cette place est disponible
+                if ($result['count'] == 0) {
+                    $availableSpots[] = $spot;
+                    error_log("Place ID {$spot['id']} (numéro {$spot['numero']}) est disponible.");
+                } else {
+                    error_log("Place ID {$spot['id']} (numéro {$spot['numero']}) n'est PAS disponible.");
+                }
+            }
+            
+            error_log("Nombre de places disponibles trouvées: " . count($availableSpots));
+            return $availableSpots;
+            
+        } catch (PDOException $e) {
+            error_log("Erreur dans getAvailableSpotsByPeriod: " . $e->getMessage());
+            return [];
+        }
+    }
+    
+    /**
+     * Vérifier si une place est disponible pour une période donnée
+     *
+     * @param int $spotId ID de la place
+     * @param string $startDate Date de début (format Y-m-d H:i:s)
+     * @param string $endDate Date de fin (format Y-m-d H:i:s)
+     * @return bool True si disponible, false sinon
+     */
+    public static function isSpotAvailableForPeriod($spotId, $startDate, $endDate) {
+        $db = Database::getInstance();
+        $conn = $db->getConnection();
+        
+        try {
+            // Vérifier d'abord que la place existe et n'est pas hors service
+            $spotStmt = $conn->prepare("SELECT statut FROM places_parking WHERE id = :id");
+            $spotStmt->bindParam(':id', $spotId, PDO::PARAM_INT);
+            $spotStmt->execute();
+            $spotData = $spotStmt->fetch(PDO::FETCH_ASSOC);
+            
+            if (!$spotData) {
+                error_log("La place ID {$spotId} n'existe pas.");
+                return false;
+            }
+            
+            if ($spotData['statut'] === 'hors_service') {
+                error_log("La place ID {$spotId} est hors service.");
+                return false;
+            }
+            
+            // Vérifier les réservations existantes avec une requête simplifiée et debuggée
+            $stmt = $conn->prepare("
+                SELECT COUNT(*) as count
+                FROM reservations
+                WHERE emplacement_id = :spot_id
+                AND statut IN ('en_attente', 'confirmée')
+                AND (
+                    (date_debut < :end_date AND date_fin > :start_date)
+                )
+            ");
+            
+            $stmt->bindParam(':spot_id', $spotId, PDO::PARAM_INT);
+            $stmt->bindParam(':start_date', $startDate);
+            $stmt->bindParam(':end_date', $endDate);
+            $stmt->execute();
+            
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            $isAvailable = ($result['count'] == 0);
+            
+            error_log("Vérification de disponibilité pour place {$spotId}: " . 
+                      ($isAvailable ? 'DISPONIBLE' : 'NON DISPONIBLE') . 
+                      " ({$result['count']} conflits)");
+            
+            return $isAvailable;
+        } catch (PDOException $e) {
+            error_log("Erreur dans isSpotAvailableForPeriod: " . $e->getMessage());
             return false;
         }
     }
     
     /**
-     * Marque une place de parking comme occupée
+     * Crée une nouvelle place de parking
      *
-     * @return bool Succès ou échec de l'opération
+     * @param string $numero Numéro de la place
+     * @param string $type Type de place (normale, handicapée, etc.)
+     * @param string $statut Statut initial (libre, occupée)
+     * @param int $parkingId ID du parking (optionnel)
+     * @return bool Succès ou échec de la création
+     */
+    public static function create($numero, $type = 'normale', $statut = 'libre', $parkingId = 1) {
+        $db = Database::getInstance();
+        $conn = $db->getConnection();
+        
+        try {
+            $stmt = $conn->prepare("
+                INSERT INTO places_parking (numero, type, statut, parking_id)
+                VALUES (:numero, :type, :statut, :parking_id)
+            ");
+            
+            $stmt->bindParam(':numero', $numero);
+            $stmt->bindParam(':type', $type);
+            $stmt->bindParam(':statut', $statut);
+            $stmt->bindParam(':parking_id', $parkingId, PDO::PARAM_INT);
+            
+            return $stmt->execute();
+        } catch (PDOException $e) {
+            error_log("Error in create spot: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Supprimer une place de parking
+     *
+     * @param int $id ID de la place à supprimer
+     * @return bool Succès ou échec de la suppression
+     */
+    public static function delete($id) {
+        $db = Database::getInstance();
+        $conn = $db->getConnection();
+        
+        try {
+            $stmt = $conn->prepare("DELETE FROM places_parking WHERE id = :id");
+            $stmt->bindParam(':id', $id, PDO::PARAM_INT);
+            
+            return $stmt->execute();
+        } catch (PDOException $e) {
+            error_log("Error deleting spot: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Mettre à jour le statut d'une place de parking
+     *
+     * @param int $spotId ID de la place
+     * @param string $status Nouveau statut ('libre', 'occupee', 'hors_service')
+     * @return bool Succès ou échec
+     */
+    public static function updateStatus($spotId, $status) {
+        $db = Database::getInstance();
+        $conn = $db->getConnection();
+        
+        try {
+            $validStatuses = ['libre', 'occupee', 'hors_service'];
+            if (!in_array($status, $validStatuses)) {
+                error_log("Invalid status: $status");
+                return false;
+            }
+            
+            $stmt = $conn->prepare("UPDATE places_parking SET statut = :statut WHERE id = :id");
+            $stmt->bindParam(':statut', $status);
+            $stmt->bindParam(':id', $spotId, PDO::PARAM_INT);
+            
+            $result = $stmt->execute();
+            error_log("Updated spot $spotId status to $status: " . ($result ? 'success' : 'failed'));
+            return $result;
+        } catch (PDOException $e) {
+            error_log("Error in updateStatus: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Marque cette place comme occupée
+     *
+     * @return bool Succès ou échec
      */
     public function markAsOccupied() {
-        $this->statut = 'occupée';
-        $db = Database::getInstance();
-        $conn = $db->getConnection();
-        
-        try {
-            $stmt = $conn->prepare("UPDATE places_parking SET statut = :statut WHERE id = :id");
-            $stmt->bindParam(':statut', $this->statut);
-            $stmt->bindParam(':id', $this->id, PDO::PARAM_INT);
-            return $stmt->execute();
-        } catch (PDOException $e) {
-            error_log("Erreur lors de la mise à jour du statut de la place de parking: " . $e->getMessage());
-            return false;
-        }
+        return self::updateStatus($this->id, 'occupée');
+    }
+    
+    /**
+     * Marque cette place comme libre
+     *
+     * @return bool Succès ou échec
+     */
+    public function markAsFree() {
+        return self::updateStatus($this->id, 'libre');
     }
 }
 ?>

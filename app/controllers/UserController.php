@@ -1,4 +1,5 @@
 <?php
+require_once 'core/BaseController.php';
 require_once 'app/models/User.php';
 
 class UserController extends BaseController {
@@ -78,107 +79,96 @@ class UserController extends BaseController {
         }
     }
     
+    /**
+     * Affiche le profil de l'utilisateur connecté
+     */
     public function profile() {
         // Vérifier si l'utilisateur est connecté
-        if (session_status() == PHP_SESSION_NONE) {
-            session_start();
-        }
-        
         if (!isset($_SESSION['user_id'])) {
             header('Location: index.php?controller=auth&action=login');
             exit;
         }
         
-        // Récupérer l'ID de l'utilisateur connecté
-        $userId = $_SESSION['user_id'];
-        
-        // Récupérer les informations de l'utilisateur
-        $user = User::findById($userId);
-        
-        // Inclure la vue du profil utilisateur
-        include 'app/views/user/profile.php';
-    }
-
-    /**
-     * Edit user profile
-     */
-    public function edit() {
-        // Vérifier si l'utilisateur est connecté
-        session_start();
-        if (!isset($_SESSION['user_id'])) {
-            header('Location: index.php?controller=auth&action=login');
-            exit;
-        }
-        
-        // Récupérer l'ID de l'utilisateur connecté
         $userId = $_SESSION['user_id'];
         
         // Récupérer les informations de l'utilisateur
         $user = User::findById($userId);
         
         if (!$user) {
-            header('Location: index.php?controller=user&action=profile');
+            $this->redirect('dashboard', 'index');
+            return;
+        }
+        
+        $this->render('user/profile', ['user' => $user]);
+    }
+
+    /**
+     * Modifie les informations du profil utilisateur
+     */
+    public function edit() {
+        // Vérifier si l'utilisateur est connecté
+        if (!isset($_SESSION['user_id'])) {
+            header('Location: index.php?controller=auth&action=login');
             exit;
         }
         
-        $errors = [];
-        $success = false;
+        $userId = $_SESSION['user_id'];
+        $user = User::findById($userId);
         
-        // Traitement du formulaire d'édition
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $nom = isset($_POST['nom']) ? trim($_POST['nom']) : '';
-            $prenom = isset($_POST['prenom']) ? trim($_POST['prenom']) : '';
-            $email = isset($_POST['email']) ? trim($_POST['email']) : '';
-            $telephone = isset($_POST['telephone']) ? trim($_POST['telephone']) : '';
-            
-            // Validation des données
-            if (empty($nom)) {
-                $errors[] = "Le nom est requis.";
-            }
-            
-            if (empty($prenom)) {
-                $errors[] = "Le prénom est requis.";
-            }
-            
-            if (empty($email)) {
-                $errors[] = "L'email est requis.";
-            } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                $errors[] = "Format d'email invalide.";
-            }
-            
-            // Si l'email a changé, vérifier qu'il n'est pas déjà utilisé
-            if ($email !== $user['email']) {
-                $existingUser = User::findByEmail($email);
-                if ($existingUser && $existingUser['id'] != $userId) {
-                    $errors[] = "Cet email est déjà utilisé par un autre compte.";
-                }
-            }
-            
-            // Mise à jour du profil si pas d'erreurs
-            if (empty($errors)) {
-                $userData = [
-                    'nom' => $nom,
-                    'prenom' => $prenom,
-                    'email' => $email,
-                    'telephone' => $telephone
-                ];
-                
-                // Fix: Pass both the user ID and the data to update
-                if (User::update($userId, $userData)) {
-                    $success = true;
-                    $user = User::findById($userId); // Refresh user data
-                } else {
-                    $errors[] = "Erreur lors de la mise à jour du profil.";
-                }
-            }
+        if (!$user) {
+            $this->redirect('dashboard', 'index');
+            return;
         }
         
-        // Afficher le formulaire d'édition avec les données actuelles
-        $this->render('user/edit', [
-            'user' => $user,
-            'errors' => $errors,
-            'success' => $success
-        ]);
+        // Traiter le formulaire si soumis
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $nom = isset($_POST['nom']) ? htmlspecialchars(trim($_POST['nom'])) : $user['nom'];
+            $prenom = isset($_POST['prenom']) ? htmlspecialchars(trim($_POST['prenom'])) : $user['prenom'];
+            $email = isset($_POST['email']) ? filter_var(trim($_POST['email']), FILTER_SANITIZE_EMAIL) : $user['email'];
+            $telephone = isset($_POST['telephone']) ? htmlspecialchars(trim($_POST['telephone'])) : $user['telephone'];
+            
+            // Validation de l'email
+            if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $this->render('user/edit', [
+                    'user' => $user,
+                    'error' => "L'adresse email n'est pas valide."
+                ]);
+                return;
+            }
+            
+            // Vérifier que l'email n'est pas déjà utilisé par un autre utilisateur
+            if ($email !== $user['email'] && User::emailExists($email, $userId)) {
+                $this->render('user/edit', [
+                    'user' => $user,
+                    'error' => "Cette adresse email est déjà utilisée."
+                ]);
+                return;
+            }
+            
+            // Mettre à jour le profil
+            $data = [
+                'nom' => $nom,
+                'prenom' => $prenom,
+                'email' => $email,
+                'telephone' => $telephone
+            ];
+            
+            if (User::update($userId, $data)) {
+                // Mettre à jour les informations de session
+                $_SESSION['user_nom'] = $nom;
+                $_SESSION['user_prenom'] = $prenom;
+                $_SESSION['user_email'] = $email;
+                
+                $this->redirect('user', 'profile', ['success' => 'Profil mis à jour avec succès']);
+            } else {
+                $this->render('user/edit', [
+                    'user' => $user,
+                    'error' => "Une erreur est survenue lors de la mise à jour du profil."
+                ]);
+            }
+        } else {
+            $this->render('user/edit', ['user' => $user]);
+        }
     }
 
     /**

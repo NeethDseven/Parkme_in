@@ -143,9 +143,15 @@ include_once BASE_PATH . '/app/views/includes/header.php';
                             </div>
                         <?php endif; ?>
                         <!-- End Pagination component -->
+                    <?php else: ?>
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle-fill me-2"></i> Aucune réservation passée trouvée
+                        </div>
                     <?php endif; ?>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<?php include_once BASE_PATH . '/app/views/includes/footer.php'; ?>

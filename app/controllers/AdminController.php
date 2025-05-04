@@ -16,6 +16,110 @@ class AdminController extends BaseController {
         }
     }
     
+    /**
+     * Affiche le tableau de bord administrateur
+     */
+    public function dashboard() {
+        require_once 'app/models/Reservation.php';
+        require_once 'app/models/ParkingSpot.php';
+        
+        // Récupérer les statistiques
+        $stats = $this->getAdminStats();
+        
+        // Récupérer les réservations récentes
+        $recentReservations = $this->getRecentReservations(5);
+        
+        // Récupérer les nouveaux utilisateurs
+        $newUsers = $this->getNewUsers(5);
+        
+        $this->render('admin/dashboard', [
+            'stats' => $stats,
+            'recentReservations' => $recentReservations,
+            'newUsers' => $newUsers
+        ]);
+    }
+    
+    /**
+     * Récupère les statistiques pour le tableau de bord admin
+     */
+    private function getAdminStats() {
+        $db = Database::getInstance();
+        $conn = $db->getConnection();
+        $stats = [];
+        
+        // Nombre d'utilisateurs
+        $stmt = $conn->query("SELECT COUNT(*) FROM utilisateurs");
+        $stats['userCount'] = $stmt->fetchColumn();
+        
+        // Nombre total de réservations
+        $stmt = $conn->query("SELECT COUNT(*) FROM reservations");
+        $stats['reservationCount'] = $stmt->fetchColumn();
+        
+        // Nombre de réservations actives
+        $stmt = $conn->query("SELECT COUNT(*) FROM reservations WHERE statut = 'confirmée' AND date_fin > NOW()");
+        $stats['activeReservationCount'] = $stmt->fetchColumn();
+        
+        // Nombre de places de parking
+        $stmt = $conn->query("SELECT COUNT(*) FROM places_parking");
+        $stats['parkingSpotCount'] = $stmt->fetchColumn();
+        
+        // Revenus totaux
+        $stmt = $conn->query("SELECT COALESCE(SUM(prix), 0) FROM reservations WHERE statut != 'annulée'");
+        $stats['totalRevenue'] = $stmt->fetchColumn();
+        
+        // Revenus mensuels
+        $stmt = $conn->query("SELECT COALESCE(SUM(prix), 0) FROM reservations WHERE statut != 'annulée' AND MONTH(date_debut) = MONTH(CURRENT_DATE()) AND YEAR(date_debut) = YEAR(CURRENT_DATE())");
+        $stats['monthlyRevenue'] = $stmt->fetchColumn();
+        
+        // Revenus hebdomadaires
+        $stmt = $conn->query("SELECT COALESCE(SUM(prix), 0) FROM reservations WHERE statut != 'annulée' AND date_debut >= DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY)");
+        $stats['weeklyRevenue'] = $stmt->fetchColumn();
+        
+        // Revenus quotidiens
+        $stmt = $conn->query("SELECT COALESCE(SUM(prix), 0) FROM reservations WHERE statut != 'annulée' AND DATE(date_debut) = CURRENT_DATE()");
+        $stats['dailyRevenue'] = $stmt->fetchColumn();
+        
+        return $stats;
+    }
+    
+    /**
+     * Récupère les réservations récentes
+     */
+    private function getRecentReservations($limit = 5) {
+        $db = Database::getInstance();
+        $conn = $db->getConnection();
+        
+        $stmt = $conn->prepare("
+            SELECT r.*, u.nom, u.prenom 
+            FROM reservations r
+            JOIN utilisateurs u ON r.utilisateur_id = u.id
+            ORDER BY r.date_reservation DESC
+            LIMIT :limit
+        ");
+        $stmt->bindParam(':limit', $limit, PDO::PARAM_INT);
+        $stmt->execute();
+        
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+    
+    /**
+     * Récupère les nouveaux utilisateurs
+     */
+    private function getNewUsers($limit = 5) {
+        $db = Database::getInstance();
+        $conn = $db->getConnection();
+        
+        $stmt = $conn->prepare("
+            SELECT * FROM utilisateurs
+            ORDER BY date_creation DESC
+            LIMIT :limit
+        ");
+        $stmt->bindParam(':limit', $limit, PDO::PARAM_INT);
+        $stmt->execute();
+        
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+    
     public function users() {
         $users = User::findAll();
         $this->render('admin/users', ['users' => $users]);

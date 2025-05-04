@@ -7,7 +7,39 @@
     
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">  
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     
+    <!-- Style personnalisé -->
+    <style>
+        .fade-in {
+            animation: fadeIn 0.5s;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        .shadow-sm-hover:hover {
+            box-shadow: 0 .125rem .25rem rgba(0,0,0,.075)!important;
+            transition: box-shadow 0.3s ease-in-out;
+        }
+        .bg-light-custom {
+            background-color: #f8f9fa;
+        }
+        .section-title {
+            border-left: 4px solid #007bff;
+            padding-left: 10px;
+        }
+        .accent-border-left {
+            border-left: 3px solid #007bff;
+            padding-left: 15px;
+        }
+        .notification-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            font-size: 0.75em;
+        }
+    </style>
 </head>
 <body>
     <header>
@@ -31,6 +63,16 @@
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link" href="index.php?controller=user&action=profile">Mon profil</a>
+                            </li>
+                            <!-- Notifications dropdown -->
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle position-relative" href="#" id="notificationsDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                    <i class="bi bi-bell-fill"></i>
+                                    <span id="notification-badge" class="badge badge-danger notification-badge d-none">0</span>
+                                </a>
+                                <div id="notification-dropdown-menu" class="dropdown-menu dropdown-menu-right" aria-labelledby="notificationsDropdown">
+                                    <div class="dropdown-item text-center text-muted">Chargement...</div>
+                                </div>
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link" href="index.php?controller=auth&action=logout">Déconnexion</a>

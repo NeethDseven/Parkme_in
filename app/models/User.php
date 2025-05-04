@@ -1,244 +1,290 @@
 <?php
-require_once 'core/BaseModel.php';
+require_once __DIR__ . '/../../core/Model.php';
+require_once __DIR__ . '/../../app/models/Database.php';
 
-class User extends BaseModel {
+class User extends Model {
     protected static $table = 'utilisateurs';
-    protected static $primaryKey = 'id';
-
-    // Define properties to avoid deprecation warnings
-    public $id;
-    public $nom;
-    public $prenom;
-    public $email;
-    public $password;
-    public $telephone;
-    public $role;
-    public $date_creation;
-
-    private $db;
-
-    public function __construct()
-    {
-        $this->db = Database::getInstance();
-    }
-
-    public static function findByEmail($email) {
-        $db = Database::getInstance();
-        $conn = $db->getConnection();
-        
-        $stmt = $conn->prepare("SELECT * FROM utilisateurs WHERE email = :email");
-        $stmt->bindParam(':email', $email);
-        $stmt->execute();
-        
-        $row = $stmt->fetch(PDO::FETCH_ASSOC);
-        if ($row) {
-            return $row; // Retourner directement le tableau associatif
-        }
-        
-        return null;
-    }
+    protected static $fillable = [
+        'nom', 'prenom', 'email', 'password', 'telephone', 'role', 'date_creation'
+    ];
 
     /**
-     * Find user by ID
-     * 
-     * @param int $id User ID
-     * @return array|null User data if found, null otherwise
+     * Récupérer un utilisateur par son ID
+     *
+     * @param int $id ID de l'utilisateur
+     * @return array|null Données de l'utilisateur ou null si non trouvé
      */
     public static function findById($id) {
         $db = Database::getInstance();
         $conn = $db->getConnection();
         
-        $stmt = $conn->prepare("SELECT * FROM utilisateurs WHERE id = :id");
-        $stmt->bindParam(':id', $id);
-        $stmt->execute();
-        
-        return $stmt->fetch(PDO::FETCH_ASSOC);
-    }
-
-    public static function createUser($nom, $prenom, $email, $password, $role = 'user') {
-        $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-        $data = [
-            'nom' => $nom,
-            'prenom' => $prenom,
-            'email' => $email,
-            'password' => $hashed_password,
-            'role' => $role
-        ];
-        return self::create($data);
-    }
-    
-    public static function updateUser($id, $data) {
-        if (isset($data['password']) && !empty($data['password'])) {
-            $data['password'] = password_hash($data['password'], PASSWORD_DEFAULT);
-        } else {
-            unset($data['password']);
+        try {
+            $stmt = $conn->prepare("SELECT * FROM utilisateurs WHERE id = :id");
+            $stmt->bindParam(':id', $id, PDO::PARAM_INT);
+            $stmt->execute();
+            
+            $user = $stmt->fetch(PDO::FETCH_ASSOC);
+            return $user ? $user : null;
+        } catch (PDOException $e) {
+            error_log("Error in findById: " . $e->getMessage());
+            return null;
         }
-        return self::update($id, $data);
-    }
-    
-    public static function isAdmin($userId) {
-        $db = Database::getInstance();
-        $conn = $db->getConnection();
-        $stmt = $conn->prepare("SELECT role FROM " . self::$table . " WHERE id=? AND role='admin'");
-        $stmt->bind_param("i", $userId);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        return $result->num_rows > 0;
     }
 
     /**
-     * Create a new user
-     * 
-     * @param array $userData User data array with all required fields
-     * @return int|false The ID of the newly created user, or false on failure
+     * Récupérer un utilisateur par son email
+     *
+     * @param string $email Email de l'utilisateur
+     * @return array|null Données de l'utilisateur ou null si non trouvé
      */
-    public static function create($userData) {
+    public static function findByEmail($email) {
+        $db = Database::getInstance();
+        $conn = $db->getConnection();
+        
         try {
-            $db = Database::getInstance();
-            $conn = $db->getConnection();
+            $stmt = $conn->prepare("SELECT * FROM utilisateurs WHERE email = :email");
+            $stmt->bindParam(':email', $email);
+            $stmt->execute();
             
-            // Validate required fields
-            $requiredFields = ['nom', 'email', 'password'];
-            foreach ($requiredFields as $field) {
-                if (empty($userData[$field])) {
-                    error_log("Missing required field: $field");
-                    return false;
+            $user = $stmt->fetch(PDO::FETCH_ASSOC);
+            return $user ? $user : null;
+        } catch (PDOException $e) {
+            error_log("Error in findByEmail: " . $e->getMessage());
+            return null;
+        }
+    }
+    
+    /**
+     * Récupérer tous les utilisateurs
+     *
+     * @return array Tableau de tous les utilisateurs
+     */
+    public static function findAll() {
+        $db = Database::getInstance();
+        $conn = $db->getConnection();
+        
+        try {
+            $stmt = $conn->query("SELECT * FROM utilisateurs ORDER BY date_creation DESC");
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            error_log("Error in findAll: " . $e->getMessage());
+            return [];
+        }
+    }
+    
+    /**
+     * Créer un nouvel utilisateur
+     *
+     * @param string $nom Nom de l'utilisateur
+     * @param string $prenom Prénom de l'utilisateur
+     * @param string $email Email de l'utilisateur
+     * @param string $password Mot de passe de l'utilisateur (en clair)
+     * @param string $role Rôle de l'utilisateur (défaut: 'user')
+     * @return bool Succès ou échec de la création
+     */
+    public static function createUser($nom, $prenom, $email, $password, $role = 'user') {
+        $db = Database::getInstance();
+        $conn = $db->getConnection();
+        
+        // Vérifier si l'email existe déjà
+        $stmt = $conn->prepare("SELECT id FROM utilisateurs WHERE email = :email");
+        $stmt->bindParam(':email', $email);
+        $stmt->execute();
+        
+        if ($stmt->fetch()) {
+            return false; // L'email existe déjà
+        }
+        
+        try {
+            $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+            
+            $stmt = $conn->prepare("
+                INSERT INTO utilisateurs (nom, prenom, email, password, role, date_creation)
+                VALUES (:nom, :prenom, :email, :password, :role, NOW())
+            ");
+            
+            $stmt->bindParam(':nom', $nom);
+            $stmt->bindParam(':prenom', $prenom);
+            $stmt->bindParam(':email', $email);
+            $stmt->bindParam(':password', $hashedPassword);
+            $stmt->bindParam(':role', $role);
+            
+            return $stmt->execute();
+        } catch (PDOException $e) {
+            error_log("Error in createUser: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Mettre à jour un utilisateur existant
+     *
+     * @param int $id ID de l'utilisateur
+     * @param array $data Données à mettre à jour
+     * @return bool Succès ou échec de la mise à jour
+     */
+    public static function updateUser($id, $data) {
+        $db = Database::getInstance();
+        $conn = $db->getConnection();
+        
+        try {
+            $query = "UPDATE utilisateurs SET ";
+            $params = [];
+            
+            foreach ($data as $key => $value) {
+                if ($key === 'password' && !empty($value)) {
+                    $params[] = "$key = :$key";
+                    $data[$key] = password_hash($value, PASSWORD_DEFAULT);
+                } elseif ($key !== 'password') {
+                    $params[] = "$key = :$key";
                 }
             }
             
-            // Check if email already exists
-            $stmt = $conn->prepare("SELECT id FROM utilisateurs WHERE email = :email");
-            $stmt->bindValue(':email', $userData['email']);
+            $query .= implode(", ", $params);
+            $query .= " WHERE id = :id";
+            
+            $stmt = $conn->prepare($query);
+            
+            foreach ($data as $key => $value) {
+                if ($key === 'password' && empty($value)) {
+                    continue;
+                }
+                $stmt->bindValue(":$key", $value);
+            }
+            
+            $stmt->bindParam(':id', $id, PDO::PARAM_INT);
+            
+            return $stmt->execute();
+        } catch (PDOException $e) {
+            error_log("Error in updateUser: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Mettre à jour le mot de passe d'un utilisateur
+     *
+     * @param int $id ID de l'utilisateur
+     * @param string $hashedPassword Mot de passe déjà hashé
+     * @return bool Succès ou échec de la mise à jour
+     */
+    public static function updatePassword($id, $hashedPassword) {
+        $db = Database::getInstance();
+        $conn = $db->getConnection();
+        
+        try {
+            $stmt = $conn->prepare("UPDATE utilisateurs SET password = :password WHERE id = :id");
+            $stmt->bindParam(':password', $hashedPassword);
+            $stmt->bindParam(':id', $id, PDO::PARAM_INT);
+            
+            return $stmt->execute();
+        } catch (PDOException $e) {
+            error_log("Error in updatePassword: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Mettre à jour un utilisateur
+     *
+     * @param int $id ID de l'utilisateur
+     * @param array $data Données à mettre à jour
+     * @return bool Succès ou échec de la mise à jour
+     */
+    public static function update($id, $data) {
+        return self::updateUser($id, $data);
+    }
+    
+    /**
+     * Supprimer un utilisateur
+     *
+     * @param int $id ID de l'utilisateur à supprimer
+     * @return bool Succès ou échec de la suppression
+     */
+    public static function delete($id) {
+        $db = Database::getInstance();
+        $conn = $db->getConnection();
+        
+        try {
+            $stmt = $conn->prepare("DELETE FROM utilisateurs WHERE id = :id");
+            $stmt->bindParam(':id', $id, PDO::PARAM_INT);
+            
+            return $stmt->execute();
+        } catch (PDOException $e) {
+            error_log("Error in delete: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Vérifier si un email existe déjà
+     *
+     * @param string $email Email à vérifier
+     * @param int|null $excludeId ID de l'utilisateur à exclure de la vérification
+     * @return bool True si l'email existe déjà, false sinon
+     */
+    public static function emailExists($email, $excludeId = null) {
+        $db = Database::getInstance();
+        $conn = $db->getConnection();
+        
+        try {
+            if ($excludeId) {
+                $stmt = $conn->prepare("SELECT id FROM utilisateurs WHERE email = :email AND id != :id");
+                $stmt->bindParam(':id', $excludeId, PDO::PARAM_INT);
+            } else {
+                $stmt = $conn->prepare("SELECT id FROM utilisateurs WHERE email = :email");
+            }
+            
+            $stmt->bindParam(':email', $email);
             $stmt->execute();
             
-            if ($stmt->fetch()) {
-                error_log("Email already exists: " . $userData['email']);
-                return false;
-            }
-            
-            // Hash password if it's not already hashed
-            if (!password_get_info($userData['password'])['algo']) {
-                $userData['password'] = password_hash($userData['password'], PASSWORD_DEFAULT);
-            }
-            
-            // Set default role if not provided
-            if (!isset($userData['role'])) {
-                $userData['role'] = 'user';
-            }
-            
-            // Prepare SQL statement
-            $fields = array_keys($userData);
-            $placeholders = array_map(function($field) { return ":$field"; }, $fields);
-            
-            $sql = "INSERT INTO utilisateurs (" . implode(', ', $fields) . ") 
-                    VALUES (" . implode(', ', $placeholders) . ")";
-            
-            $stmt = $conn->prepare($sql);
-            
-            // Bind parameters
-            foreach ($userData as $field => $value) {
-                $stmt->bindValue(":$field", $value);
-            }
-            
-            // Execute the query
-            $success = $stmt->execute();
-            
-            if ($success) {
-                return $conn->lastInsertId();
-            } else {
-                $errorInfo = $stmt->errorInfo();
-                error_log("Database error during user creation: " . $errorInfo[2]);
-                return false;
-            }
-            
+            return $stmt->fetch() ? true : false;
         } catch (PDOException $e) {
-            error_log("Exception during user creation: " . $e->getMessage());
+            error_log("Error in emailExists: " . $e->getMessage());
             return false;
         }
     }
 
     /**
-     * Authenticate a user with email and password
+     * Crée un nouvel utilisateur
      * 
-     * @param string $email User email
-     * @param string $password User password
-     * @return array|bool User data if authenticated, false otherwise
+     * @param string $nom Nom de l'utilisateur
+     * @param string $prenom Prénom de l'utilisateur
+     * @param string $email Email de l'utilisateur
+     * @param string $password_hash Mot de passe haché
+     * @param string $telephone Téléphone de l'utilisateur (optionnel)
+     * @return int|bool ID de l'utilisateur créé ou false en cas d'échec
      */
-    public function authenticate($email, $password)
-    {
-        // Sanitize email
-        $email = filter_var($email, FILTER_SANITIZE_EMAIL);
+    public static function create($nom, $prenom, $email, $password_hash, $telephone = null) {
+        $db = Database::getInstance();
+        $conn = $db->getConnection();
         
-        // Query to find user by email
-        $query = "SELECT * FROM utilisateurs WHERE email = ?";
-        $stmt = $this->db->prepare($query);
-        $stmt->execute([$email]);
-        $user = $stmt->fetch(PDO::FETCH_ASSOC);
-        
-        // Check if user exists and verify password
-        if ($user && password_verify($password, $user['mot_de_passe'])) {
-            return $user;
+        try {
+            // Vérifier si l'email existe déjà
+            if (self::emailExists($email)) {
+                return false;
+            }
+            
+            $stmt = $conn->prepare("
+                INSERT INTO utilisateurs (nom, prenom, email, password, telephone, role, date_creation)
+                VALUES (:nom, :prenom, :email, :password, :telephone, 'user', NOW())
+            ");
+            
+            $stmt->bindParam(':nom', $nom);
+            $stmt->bindParam(':prenom', $prenom);
+            $stmt->bindParam(':email', $email);
+            $stmt->bindParam(':password', $password_hash);
+            $stmt->bindParam(':telephone', $telephone);
+            
+            if ($stmt->execute()) {
+                return $conn->lastInsertId();
+            }
+            
+            return false;
+        } catch (PDOException $e) {
+            error_log("Error in User::create: " . $e->getMessage());
+            return false;
         }
-        
-        return false;
-    }
-    
-    /**
-     * Save remember me token for a user
-     * 
-     * @param int $userId User ID
-     * @param string $token Remember me token
-     * @return bool Success or failure
-     */
-    public function saveRememberToken($userId, $token)
-    {
-        $userId = (int)$userId;
-        
-        $query = "UPDATE utilisateurs SET remember_token = ? WHERE id = ?";
-        $stmt = $this->db->prepare($query);
-        return $stmt->execute([$token, $userId]);
-    }
-    
-    /**
-     * Get user by remember token
-     * 
-     * @param string $token Remember token
-     * @return array|bool User data if found, false otherwise
-     */
-    public function getUserByRememberToken($token)
-    {
-        $query = "SELECT * FROM utilisateurs WHERE remember_token = ?";
-        $stmt = $this->db->prepare($query);
-        $stmt->execute([$token]);
-        return $stmt->fetch(PDO::FETCH_ASSOC);
-    }
-    
-    /**
-     * Register a new user
-     * 
-     * @param array $userData User data
-     * @return int|bool New user ID if successful, false otherwise
-     */
-    public function register($userData)
-    {
-        // Hash the password
-        $passwordHash = password_hash($userData['password'], PASSWORD_DEFAULT);
-        
-        $query = "INSERT INTO utilisateurs (email, mot_de_passe, nom, prenom) VALUES (?, ?, ?, ?)";
-        $stmt = $this->db->prepare($query);
-        
-        $success = $stmt->execute([
-            $userData['email'],
-            $passwordHash,
-            $userData['nom'] ?? '',
-            $userData['prenom'] ?? ''
-        ]);
-        
-        if ($success) {
-            return $this->db->lastInsertId();
-        }
-        
-        return false;
     }
 }
 ?>

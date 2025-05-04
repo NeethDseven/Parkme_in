@@ -1,18 +1,18 @@
 <?php
+require_once 'core/BaseController.php';
+require_once 'app/models/Parking.php';
 
 class ParkingController extends BaseController {
     
-    public function index() {
-        // Vérifier si l'utilisateur est connecté
-        session_start();
+    public function __construct() {
+        // Remplacer session_start() par une vérification
         if (!isset($_SESSION['user_id'])) {
             header('Location: index.php?controller=auth&action=login');
             exit;
         }
-        
-        // Inclure le modèle des parkings
-        require_once 'app/models/Parking.php';
-        
+    }
+    
+    public function index() {
         // Récupérer la liste des parkings
         $parkings = Parking::getAll();
         
@@ -21,13 +21,6 @@ class ParkingController extends BaseController {
     }
     
     public function view() {
-        // Vérifier si l'utilisateur est connecté
-        session_start();
-        if (!isset($_SESSION['user_id'])) {
-            header('Location: index.php?controller=auth&action=login');
-            exit;
-        }
-        
         // Récupérer l'ID du parking
         $parkingId = isset($_GET['id']) ? (int)$_GET['id'] : null;
         
@@ -37,7 +30,6 @@ class ParkingController extends BaseController {
         }
         
         // Inclure les modèles nécessaires
-        require_once 'app/models/Parking.php';
         require_once __DIR__ . '/../models/ParkingSpot.php';
         
         // Récupérer les détails du parking
