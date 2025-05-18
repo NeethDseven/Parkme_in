@@ -1,0 +1,13 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /Projet/Parking%20final/
+    
+    # Si la requête commence par /Parking%20final/, rediriger vers le bon chemin
+    RewriteCond %{REQUEST_URI} ^/Parking%20final/(.*)$ [NC]
+    RewriteRule ^Parking%20final/(.*)$ /Projet/Parking%20final/$1 [R=301,L]
+    
+    # Traiter normalement les autres requêtes
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^(.*)$ index.php [L]
+</IfModule>
