@@ -4,7 +4,7 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>Réserver une place</title>
+    <title>Réserver une place - Parkme In</title>
     <link rel="stylesheet" href="<?= BASE_URL ?>/public/css/style.css">
 </head>
 <body>

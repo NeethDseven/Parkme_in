@@ -1,59 +1,86 @@
-// Implémentation POO pour le frontend
-class ParkingApp {
-    constructor() {
-        this.setupEventListeners();
-    }
+/**
+ * Fichier JavaScript principal pour l'application Parkme In
+ */
+
+// Initialisation des composants Bootstrap lorsque le DOM est chargé
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM chargé - Initialisation des composants');
     
-    setupEventListeners() {
-        // Recherche de tous les formulaires de réservation
-        const reservationForms = document.querySelectorAll('.reservation-form');
-        reservationForms.forEach(form => {
-            form.addEventListener('submit', this.validateReservationForm.bind(this));
-        });
-        
-        // Mise en place des onglets
-        const tabButtons = document.querySelectorAll('.tab-btn');
-        tabButtons.forEach(btn => {
-            btn.addEventListener('click', this.handleTabClick.bind(this));
+    // Initialisation des tooltips Bootstrap
+    var tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+    if (tooltipTriggerList.length > 0) {
+        tooltipTriggerList.forEach(function(tooltipTriggerEl) {
+            new bootstrap.Tooltip(tooltipTriggerEl);
         });
     }
-    
-    validateReservationForm(event) {
-        const form = event.target;
-        const dateDebut = form.querySelector('[name="date_debut"]');
-        const dateFin = form.querySelector('[name="date_fin"]');
-        
-        if (new Date(dateFin.value) <= new Date(dateDebut.value)) {
-            event.preventDefault();
-            alert("La date de fin doit être après la date de début");
-        }
-    }
-    
-    handleTabClick(event) {
-        const tabName = event.target.getAttribute('data-tab');
-        this.showTab(tabName);
-    }
-    
-    showTab(tabName) {
-        // Masquer tous les contenus des onglets
-        document.querySelectorAll('.tab-content').forEach(tab => {
-            tab.classList.remove('active');
+
+    // Initialisation des popovers Bootstrap
+    var popoverTriggerList = document.querySelectorAll('[data-bs-toggle="popover"]');
+    if (popoverTriggerList.length > 0) {
+        popoverTriggerList.forEach(function(popoverTriggerEl) {
+            new bootstrap.Popover(popoverTriggerEl);
         });
-        
-        // Désactiver tous les boutons d'onglets
-        document.querySelectorAll('.tab-btn').forEach(btn => {
-            btn.classList.remove('active');
-        });
-        
-        // Activer l'onglet sélectionné
-        document.getElementById(tabName + '-tab').classList.add('active');
-        
-        // Activer le bouton correspondant
-        document.querySelector(`.tab-btn[data-tab="${tabName}"]`).classList.add('active');
     }
+    
+    // Initialisation des onglets Bootstrap
+    var tabElements = document.querySelectorAll('[data-bs-toggle="tab"]');
+    console.log('Nombre d\'onglets trouvés:', tabElements.length);
+    
+    if (tabElements.length > 0) {
+        tabElements.forEach(function(tabElement) {
+            try {
+                new bootstrap.Tab(tabElement);
+                console.log('Onglet initialisé:', tabElement.id || 'sans ID');
+                
+                // Ajouter un écouteur d'événements pour le débogage
+                tabElement.addEventListener('shown.bs.tab', function(event) {
+                    console.log('Onglet activé:', event.target.id || 'sans ID');
+                });
+            } catch (error) {
+                console.error('Erreur lors de l\'initialisation de l\'onglet:', error);
+            }
+        });
+    }
+    
+    // Fermeture automatique des alertes après 5 secondes
+    var autoAlerts = document.querySelectorAll('.alert.auto-dismiss');
+    autoAlerts.forEach(function(alert) {
+        setTimeout(function() {
+            var closeButton = alert.querySelector('.btn-close');
+            if (closeButton) closeButton.click();
+        }, 5000);
+    });
+});
+
+/**
+ * Fonctions utilitaires pour l'application
+ */
+
+// Formatage des dates
+function formatDate(dateString) {
+    if (!dateString) return '';
+    const options = { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' };
+    return new Date(dateString).toLocaleDateString('fr-FR', options);
 }
 
-// Initialisation de l'application quand le DOM est chargé
-document.addEventListener('DOMContentLoaded', () => {
-    const app = new ParkingApp();
-});
+// Formatage des montants
+function formatAmount(amount) {
+    if (amount === null || amount === undefined) return '0,00 €';
+    return parseFloat(amount).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' });
+}
+
+// Validation des formulaires
+function validateForm(formId) {
+    const form = document.getElementById(formId);
+    if (!form) return false;
+    
+    if (form.checkValidity() === false) {
+        event.preventDefault();
+        event.stopPropagation();
+        form.classList.add('was-validated');
+        return false;
+    }
+    
+    form.classList.add('was-validated');
+    return true;
+}

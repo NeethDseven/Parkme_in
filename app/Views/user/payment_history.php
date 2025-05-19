@@ -4,7 +4,7 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>Historique des paiements</title>
+    <title>Historique des paiements - Parkme In</title>
     <link rel="stylesheet" href="<?= BASE_URL ?>/public/css/style.css">
 </head>
 <body>

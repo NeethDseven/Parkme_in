@@ -30,7 +30,34 @@ class BaseController {
     }
 
     protected function render($view, $data = []) {
+        // Extraire les données pour qu'elles soient disponibles comme variables
         extract($data);
-        require_once "app/Views/$view.php";
+        
+        // Démarrer la mise en tampon de sortie
+        ob_start();
+        
+        // Inclure la vue
+        include_once ROOT_PATH . '/app/Views/' . $view . '.php';
+        
+        // Obtenir le contenu du tampon et le vider
+        $pageContent = ob_get_clean();
+        
+        // Inclure le layout principal avec le contenu
+        include_once ROOT_PATH . '/app/Views/layouts/main.php';
+    }
+    
+    protected function redirect($url) {
+        header('Location: ' . BASE_URL . '/' . $url);
+        exit();
+    }
+    
+    protected function setFlash($type, $message) {
+        $_SESSION[$type] = $message;
+    }
+    
+    protected function json($data) {
+        header('Content-Type: application/json');
+        echo json_encode($data);
+        exit();
     }
 }

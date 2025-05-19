@@ -5,28 +5,73 @@ class NotificationService {
     private $emailService;
 
     public function __construct() {
+        // Utiliser la connexion de la classe Database
+        require_once 'config/database.php';
         $this->db = Database::connect();
-        require_once 'app/Services/LoggerService.php';
-        $this->logger = new LoggerService();
-        require_once 'app/Services/EmailService.php';
-        $this->emailService = new EmailService();
-    }
-
-    public function createNotification($userId, $titre, $message, $type = 'system') {
-        $stmt = $this->db->prepare("
-            INSERT INTO notifications (user_id, titre, message, type)
-            VALUES (?, ?, ?, ?)
-        ");
-        $result = $stmt->execute([$userId, $titre, $message, $type]);
         
-        if ($result) {
-            $this->logger->info("Notification créée", [
-                'user_id' => $userId,
-                'type' => $type
-            ]);
+        // Initialiser les services associés si nécessaire
+        if (file_exists('app/Services/LoggerService.php')) {
+            require_once 'app/Services/LoggerService.php';
+            $this->logger = new LoggerService();
         }
         
-        return $result;
+        if (file_exists('app/Services/EmailService.php')) {
+            require_once 'app/Services/EmailService.php';
+            $this->emailService = new EmailService();
+        }
+    }
+
+    /**
+     * Crée une notification de paiement
+     * 
+     * @param int $userId ID de l'utilisateur
+     * @param int $reservationId ID de la réservation
+     * @param float $montant Montant du paiement
+     * @param string $status Statut du paiement
+     * @return bool Succès de l'opération
+     */
+    public function createPaymentNotification($userId, $reservationId, $montant, $status = 'validé') {
+        $title = 'Paiement ' . $status;
+        
+        // Stocker les données structurées pour un meilleur affichage
+        $messageData = json_encode([
+            'montant' => $montant,
+            'reservation_id' => $reservationId,
+            'status' => $status
+        ]);
+        
+        // Message formaté pour la rétrocompatibilité
+        $message = "Votre paiement de {$montant}€ pour la réservation #{$reservationId} a été {$status}.";
+        
+        return $this->createNotification($userId, $title, $messageData, 'paiement');
+    }
+    
+    /**
+     * Crée une notification dans le système
+     */
+    public function createNotification($userId, $title, $message, $type = 'system', $isRead = 0) {
+        if (!$this->db) {
+            return false;
+        }
+        
+        // Utiliser des requêtes préparées au lieu de real_escape_string()
+        $stmt = $this->db->prepare("INSERT INTO notifications (user_id, titre, message, type, lu) 
+                                   VALUES (:userId, :title, :message, :type, :isRead)");
+        
+        // Si le message est un tableau ou un objet, le convertir en JSON
+        if (is_array($message) || is_object($message)) {
+            $message = json_encode($message);
+        }
+        
+        $params = [
+            ':userId' => (int)$userId,
+            ':title' => $title,
+            ':message' => $message,
+            ':type' => $type,
+            ':isRead' => (int)$isRead
+        ];
+        
+        return $stmt->execute($params);
     }
 
     public function sendReservationReminders() {
@@ -75,30 +120,85 @@ class NotificationService {
         return $stmt->execute([$reservationId]);
     }
     
+    /**
+     * Récupère toutes les notifications d'un utilisateur
+     * 
+     * @param int $userId ID de l'utilisateur
+     * @return array Notifications de l'utilisateur
+     */
     public function getUserNotifications($userId) {
-        $stmt = $this->db->prepare("
-            SELECT * FROM notifications
-            WHERE user_id = ?
-            ORDER BY created_at DESC
-            LIMIT 20
-        ");
+        if (!$this->db) {
+            return [];
+        }
+        
+        $userId = (int)$userId;
+        
+        // Utiliser prepare/execute qui est plus sécurisé que query avec des variables intégrées
+        $stmt = $this->db->prepare("SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC");
+        if (!$stmt) {
+            return [];
+        }
+        
         $stmt->execute([$userId]);
-        return $stmt->fetchAll();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
-    
-    public function markAsRead($notificationId) {
-        $stmt = $this->db->prepare("
-            UPDATE notifications SET lu = 1
-            WHERE id = ?
-        ");
-        return $stmt->execute([$notificationId]);
+
+    /**
+     * Marque une notification spécifique comme lue
+     * 
+     * @param int $notificationId ID de la notification
+     * @param int $userId ID de l'utilisateur (pour vérification)
+     * @return bool Succès de l'opération
+     */
+    public function markAsRead($notificationId, $userId) {
+        if (!$this->db) {
+            return false;
+        }
+        
+        $notificationId = (int)$notificationId;
+        $userId = (int)$userId;
+        
+        // Utiliser prepare/execute
+        $stmt = $this->db->prepare("UPDATE notifications SET lu = 1 WHERE id = ? AND user_id = ?");
+        if (!$stmt) {
+            return false;
+        }
+        
+        return $stmt->execute([$notificationId, $userId]);
+    }
+
+    /**
+     * Marque toutes les notifications d'un utilisateur comme lues
+     * 
+     * @param int $userId ID de l'utilisateur
+     * @return bool Succès de l'opération
+     */
+    public function markAllAsRead($userId) {
+        if (!$this->db) {
+            return false;
+        }
+        
+        $userId = (int)$userId;
+        
+        // Utiliser prepare/execute
+        $stmt = $this->db->prepare("UPDATE notifications SET lu = 1 WHERE user_id = ? AND lu = 0");
+        if (!$stmt) {
+            return false;
+        }
+        
+        return $stmt->execute([$userId]);
     }
 
     public function getUnreadCount($userId) {
-        $stmt = $this->db->prepare("
-            SELECT COUNT(*) FROM notifications
-            WHERE user_id = ? AND lu = 0
-        ");
+        if (!$this->db) {
+            return 0;
+        }
+        
+        $stmt = $this->db->prepare("SELECT COUNT(*) FROM notifications WHERE user_id = ? AND lu = 0");
+        if (!$stmt) {
+            return 0;
+        }
+        
         $stmt->execute([$userId]);
         return $stmt->fetchColumn();
     }
