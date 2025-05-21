@@ -10,10 +10,10 @@
                 <div class="col-md-4">
                     <h5>Liens utiles</h5>
                     <ul class="list-unstyled">
-                        <li><a href="<?= BASE_URL ?>?page=home" class="text-light">Accueil</a></li>
-                        <li><a href="<?= BASE_URL ?>?page=parking&action=list" class="text-light">Places disponibles</a></li>
+                        <li><a href="/Projet/Parking%20final/?page=home" class="text-light">Accueil</a></li>
+                        <li><a href="/Projet/Parking%20final/?page=parking&action=list" class="text-light">Places disponibles</a></li>
                         <?php if(isset($_SESSION['user_id'])): ?>
-                            <li><a href="<?= BASE_URL ?>?page=user&action=reservations" class="text-light">Mes réservations</a></li>
+                            <li><a href="/Projet/Parking%20final/?page=user&action=reservations" class="text-light">Mes réservations</a></li>
                         <?php endif; ?>
                     </ul>
                 </div>
@@ -34,19 +34,26 @@
         </div>
     </footer>
 
-    <!-- Bootstrap JS avec Popper -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Bootstrap JS avec chemin direct -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" integrity="sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz" crossorigin="anonymous"></script>
 
     <!-- jQuery (pour les fonctionnalités avancées) -->
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
 
-    <!-- Script personnalisé -->
-    <script src="<?= PUBLIC_URL ?>/js/app.js"></script>
+    <!-- Script personnalisé avec chemin absolu -->
+    <script src="/Projet/Parking%20final/public/js/app.js"></script>
 
     <?php if(isset($extraJS)): ?>
         <?php foreach($extraJS as $js): ?>
-            <script src="<?= PUBLIC_URL ?>/js/<?= $js ?>"></script>
+            <script src="/Projet/Parking%20final/public/js/<?= $js ?>"></script>
         <?php endforeach; ?>
     <?php endif; ?>
+    
+    <!-- Debug: Vérifier le chargement de Bootstrap -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log("Bootstrap disponible:", typeof bootstrap !== 'undefined');
+        });
+    </script>
 </body>
 </html>

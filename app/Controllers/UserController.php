@@ -13,116 +13,91 @@ class UserController {
     }
 
     public function listReservations() {
-        // Activer le débogage pour voir ce qui se passe
-        error_log("Exécution de listReservations pour l'utilisateur ID: " . $_SESSION['user_id']);
-        
-        try {
-            // S'assurer que l'utilisateur est connecté
-            if (!isset($_SESSION['user_id'])) {
-                $_SESSION['error'] = "Vous devez être connecté pour accéder à vos réservations.";
-                header('Location: ' . BASE_URL . '/?page=login');
-                exit;
-            }
-            
-            // TRÈS IMPORTANT : requête SQL corrigée pour récupérer les réservations de l'utilisateur
-            $stmt = $this->db->prepare("
-                SELECT r.*, 
-                       ps.numero as place_numero, 
-                       ps.type as place_type,
-                       p.montant, 
-                       p.status as payment_status
-                FROM reservations r
-                JOIN parking_spaces ps ON r.place_id = ps.id
-                LEFT JOIN paiements p ON p.reservation_id = r.id
-                WHERE r.user_id = ?
-            ");
-            
-            error_log("Exécution de la requête SQL pour l'utilisateur ID: " . $_SESSION['user_id']);
-            $stmt->execute([$_SESSION['user_id']]);
-            
-            // Récupérer les résultats
-            $reservations = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            
-            // Débogage pour voir les réservations récupérées
-            error_log("Nombre de réservations trouvées: " . count($reservations));
-            foreach ($reservations as $key => $res) {
-                error_log("Réservation #$key - ID: {$res['id']}, Status: {$res['status']}, Place: {$res['place_numero']}");
-            }
-        } catch (Exception $e) {
-            // En cas d'erreur, journaliser et initialiser un tableau vide
-            error_log("ERREUR dans listReservations: " . $e->getMessage());
-            $reservations = [];
-            $_SESSION['error'] = "Une erreur est survenue lors de la récupération de vos réservations.";
-        }
-        
-        // Afficher la vue avec les réservations
+        $stmt = $this->db->prepare("
+            SELECT r.*, p.numero as place_numero, p.type as place_type
+            FROM reservations r
+            JOIN parking_spaces p ON r.place_id = p.id
+            WHERE r.user_id = ?
+            ORDER BY r.date_debut DESC
+        ");
+        $stmt->execute([$_SESSION['user_id']]);
+        $reservations = $stmt->fetchAll();
+
         require_once 'app/Views/user/reservations.php';
     }
 
     public function cancelReservation() {
         $id = $_GET['id'] ?? null;
-        
         if (!$id) {
-            $_SESSION['error'] = "Identifiant de réservation manquant";
+            $_SESSION['error'] = "Réservation non trouvée";
             header('Location: ' . BASE_URL . '/?page=user&action=reservations');
             exit;
         }
         
         try {
-            // Vérifier que l'utilisateur est bien propriétaire de cette réservation
+            $this->db->beginTransaction();
+            
+            // Vérifier que la réservation existe et appartient à l'utilisateur
             $stmt = $this->db->prepare("
-                SELECT place_id, status FROM reservations 
-                WHERE id = ? AND user_id = ?
+                SELECT r.*, p.id as paiement_id, p.montant, ps.numero as place_numero
+                FROM reservations r
+                LEFT JOIN paiements p ON p.reservation_id = r.id
+                JOIN parking_spaces ps ON r.place_id = ps.id
+                WHERE r.id = ? AND r.user_id = ? AND r.status = 'confirmée'
             ");
             $stmt->execute([$id, $_SESSION['user_id']]);
             $reservation = $stmt->fetch();
             
             if (!$reservation) {
-                throw new Exception("Réservation non trouvée ou accès non autorisé");
+                throw new Exception("Réservation non trouvée ou déjà annulée");
             }
             
-            $this->db->beginTransaction();
-            
-            // 1. Récupérer les paiements associés à la réservation
-            $stmt = $this->db->prepare("SELECT id FROM paiements WHERE reservation_id = ?");
-            $stmt->execute([$id]);
-            $paiements = $stmt->fetchAll(PDO::FETCH_COLUMN);
-            
-            // 2. Supprimer d'abord les remboursements liés aux paiements (s'il y en a)
-            if (!empty($paiements)) {
-                $placeholders = implode(',', array_fill(0, count($paiements), '?'));
-                $stmt = $this->db->prepare("DELETE FROM remboursements WHERE paiement_id IN ($placeholders)");
-                $stmt->execute($paiements);
-            }
-            
-            // Option 1: Si on veut vraiment supprimer le paiement
-            $stmt = $this->db->prepare("DELETE FROM paiements WHERE reservation_id = ?");
-            $stmt->execute([$id]);
-            
-            // Option 2 (alternative): Marquer le paiement comme annulé plutôt que de le supprimer
-            /*
-            if (!empty($paiements)) {
-                $stmt = $this->db->prepare("UPDATE paiements SET status = 'annule' WHERE reservation_id = ?");
-                $stmt->execute([$id]);
-            }
-            */
-            
-            // Mettre à jour le statut de la réservation à "annulée"
+            // Mettre à jour le statut de la réservation
             $stmt = $this->db->prepare("UPDATE reservations SET status = 'annulée' WHERE id = ?");
-            $stmt->execute([$id]);
-            
-            // Si la réservation était "confirmée", libérer la place
-            if ($reservation['status'] === 'confirmée') {
-                $stmt = $this->db->prepare("UPDATE parking_spaces SET status = 'libre' WHERE id = ?");
-                $stmt->execute([$reservation['place_id']]);
+            if (!$stmt->execute([$id])) {
+                throw new Exception("Erreur lors de l'annulation de la réservation");
             }
+            
+            // Libérer la place
+            $stmt = $this->db->prepare("
+                UPDATE parking_spaces SET status = 'libre'
+                WHERE id = (SELECT place_id FROM reservations WHERE id = ?)
+            ");
+            if (!$stmt->execute([$id])) {
+                throw new Exception("Erreur lors de la mise à jour de la place");
+            }
+            
+            // Mettre à jour le statut du paiement
+            if ($reservation['paiement_id']) {
+                $stmt = $this->db->prepare("UPDATE paiements SET status = 'annule' WHERE id = ?");
+                if (!$stmt->execute([$reservation['paiement_id']])) {
+                    throw new Exception("Erreur lors de la mise à jour du paiement");
+                }
+                
+                $stmt = $this->db->prepare("
+                    INSERT INTO remboursements (paiement_id, montant, raison)
+                    VALUES (?, ?, 'Annulation par l\'utilisateur')
+                ");
+                if (!$stmt->execute([$reservation['paiement_id'], $reservation['montant']])) {
+                    throw new Exception("Erreur lors de la création de la demande de remboursement");
+                }
+            }
+            
+            // Ajouter une notification d'annulation
+            require_once 'app/Services/NotificationService.php';
+            $notificationService = new NotificationService();
+            $notificationService->createNotification(
+                $_SESSION['user_id'],
+                'Réservation annulée',
+                "Votre réservation de la place n°{$reservation['place_numero']} a été annulée avec succès.",
+                'annulation'
+            );
             
             $this->db->commit();
-            $_SESSION['success'] = "Votre réservation a été annulée avec succès.";
-            
+            $_SESSION['success'] = "Réservation annulée avec succès";
         } catch (Exception $e) {
             $this->db->rollBack();
-            $_SESSION['error'] = "Erreur lors de l'annulation: " . $e->getMessage();
+            $_SESSION['error'] = $e->getMessage();
         }
         
         header('Location: ' . BASE_URL . '/?page=user&action=reservations');

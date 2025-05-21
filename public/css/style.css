@@ -4,6 +4,73 @@
 :root {
   --primary-color: #3498db;
   --secondary-color: #2c3e50;
+  --light-gray: #f8f9fa;
+  --medium-gray: #e9ecef;
+  --dark-gray: #343a40;
+  --header-height: 70px;
+}
+
+/* Styles pour le header */
+header {
+  background-color: white;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+  border-bottom: 1px solid var(--medium-gray);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+header .container {
+  padding: 0.75rem 0;
+}
+
+header .logo a {
+  text-decoration: none;
+  color: var(--primary-color);
+}
+
+header .logo h1 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+header nav ul {
+  display: flex;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  gap: 1.5rem;
+}
+
+header nav ul li a {
+  color: var(--secondary-color);
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.2s;
+  padding: 0.25rem 0;
+  position: relative;
+}
+
+header nav ul li a:hover, 
+header nav ul li a:focus {
+  color: var(--primary-color);
+}
+
+header nav ul li a::after {
+  content: '';
+  position: absolute;
+  width: 0;
+  height: 2px;
+  bottom: 0;
+  left: 0;
+  background-color: var(--primary-color);
+  transition: width 0.2s;
+}
+
+header nav ul li a:hover::after,
+header nav ul li a:focus::after {
+  width: 100%;
 }
 
 /* Styles pour les places de parking */
@@ -35,12 +102,7 @@
   padding: 15px;
   margin-bottom: 15px;
   background-color: white;
-  transition: 0.3s;
   border-left: 3px solid #ddd;
-}
-
-.notification-item:hover {
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
 }
 
 .notification-item.unread {
@@ -53,18 +115,12 @@
   font-size: 0.85rem;
 }
 
-/* Personnalisation de certains éléments Bootstrap */
+/* Personnalisation des cards sans effets hover */
 .card {
   border: none;
   border-radius: 8px;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-  transition: transform 0.3s, box-shadow 0.3s;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
   margin-bottom: 20px;
-}
-
-.card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
 }
 
 /* Style personnalisé pour les boutons d'action */
@@ -73,46 +129,58 @@
   padding: 8px 20px;
 }
 
-/* Amélioration des onglets */
-.nav-tabs .nav-link {
-  color: var(--secondary-color);
-  font-weight: 500;
-  border-radius: 0;
-  border-bottom-width: 3px;
+/* Styles spécifiques pour le footer */
+footer {
+  background-color: var(--dark-gray);
+  color: white;
+  padding: 3rem 0 1.5rem;
+  margin-top: 3rem;
 }
 
-.nav-tabs .nav-link.active {
-  color: var(--primary-color);
-  border-bottom-color: var(--primary-color);
+footer h5 {
+  font-weight: 600;
+  margin-bottom: 1.25rem;
 }
 
-.nav-tabs .nav-link:hover:not(.active) {
-  border-bottom-color: #ccc;
-  background-color: #f8f9fa;
+footer a {
+  color: rgba(255, 255, 255, 0.8);
+  transition: color 0.2s;
 }
 
-.tab-content {
-  padding-top: 1.5rem;
+footer a:hover {
+  color: white;
+  text-decoration: none;
 }
 
-/* Amélioration de la notification badge */
-.notification-badge {
-  display: inline-block;
-  padding: 0.25rem 0.5rem;
-  font-size: 0.75rem;
-  line-height: 1;
-  text-align: center;
-  white-space: nowrap;
-  vertical-align: baseline;
-  border-radius: 50rem;
-  color: #fff;
-  background-color: #dc3545;
-  position: absolute;
-  top: -8px;
-  right: -8px;
+footer .border-top {
+  border-top-color: rgba(255, 255, 255, 0.1) !important;
 }
 
 /* Autres styles spécifiques à l'application */
 .content-wrapper {
   min-height: calc(100vh - 200px);
+}
+
+/* Notifications badge */
+.notification-badge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background-color: #e74c3c;
+  color: white;
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 1rem;
+  font-weight: 600;
+}
+
+/* Media queries pour responsive */
+@media (max-width: 767.98px) {
+  header nav ul {
+    gap: 0.75rem;
+  }
+  
+  header .logo h1 {
+    font-size: 1.25rem;
+  }
 }

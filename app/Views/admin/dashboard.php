@@ -73,22 +73,17 @@
                 </div>
                 <div class="card-body">
                     <div class="row g-3">
-                        <div class="col-md-3">
+                        <div class="col-md-4">
                             <a href="<?= BASE_URL ?>/?page=admin&action=users" class="btn btn-primary w-100 py-3">
                                 <i class="fas fa-users me-2"></i> Gérer les utilisateurs
                             </a>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-4">
                             <a href="<?= BASE_URL ?>/?page=admin&action=places" class="btn btn-success w-100 py-3">
                                 <i class="fas fa-parking me-2"></i> Gérer les places
                             </a>
                         </div>
-                        <div class="col-md-3">
-                            <a href="<?= BASE_URL ?>/?page=admin&action=reservations" class="btn btn-warning text-white w-100 py-3">
-                                <i class="fas fa-calendar-check me-2"></i> Gérer les réservations
-                            </a>
-                        </div>
-                        <div class="col-md-3">
+                        <div class="col-md-4">
                             <a href="<?= BASE_URL ?>/?page=admin&action=refunds" class="btn btn-info text-white w-100 py-3">
                                 <i class="fas fa-exchange-alt me-2"></i> Gérer les remboursements
                             </a>
