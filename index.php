@@ -3,7 +3,7 @@ session_start();
 
 // Définir les chemins de base
 define('ROOT_PATH', __DIR__);
-define('BASE_URL', '/Projet/Parking%20final');
+define('BASE_URL', '/projet/Parkme_in');
 define('PUBLIC_URL', BASE_URL . '/public');
 
 // ----------------------
@@ -18,15 +18,8 @@ function getFileExtension($filename) {
 // Vérifier si c'est une demande pour un fichier statique
 $uri = $_SERVER['REQUEST_URI'];
 
-// Rediriger les demandes mal formées
-if (strpos($uri, '/Parking%20final/public/') === 0) {
-    $correct_uri = str_replace('/Parking%20final/', '/Projet/Parking%20final/', $uri);
-    header('Location: ' . $correct_uri);
-    exit;
-}
-
 // Servir les fichiers statiques
-$staticExtensions = ['css', 'js', 'jpg', 'jpeg', 'png', 'gif', 'svg', 'ico', 'woff', 'woff2', 'ttf', 'eot'];
+$staticExtensions = ['css', 'js', 'jpg', 'jpeg', 'png', 'gif', 'svg', 'ico', 'woff', 'woff2', 'ttf', 'eot', 'pdf'];
 $fileExtension = getFileExtension($uri);
 
 if (in_array($fileExtension, $staticExtensions)) {
@@ -47,12 +40,15 @@ if (in_array($fileExtension, $staticExtensions)) {
         'eot' => 'application/vnd.ms-fontobject'
     ];
     
-    // Construire le chemin du fichier
-    if (strpos($uri, '/public/') !== false) {
-        $filePath = ROOT_PATH . substr($uri, strpos($uri, '/public/'));
-    } else {
-        $filePath = ROOT_PATH . $uri;
-    }
+    // Extraire le chemin relatif du fichier
+    $relativeUri = str_replace(BASE_URL, '', $uri);
+    
+    // Vérifier d'abord dans le dossier frontend/public
+    $frontendPath = ROOT_PATH . '/frontend' . $relativeUri;
+    $rootPath = ROOT_PATH . $relativeUri;
+    
+    // Décider quel fichier servir
+    $filePath = file_exists($frontendPath) ? $frontendPath : $rootPath;
     
     // Vérifier si le fichier existe et le servir
     if (file_exists($filePath)) {
@@ -60,6 +56,11 @@ if (in_array($fileExtension, $staticExtensions)) {
         readfile($filePath);
         exit;
     } else {
+        // Journaliser le fichier manquant pour débogage
+        error_log("Fichier statique non trouvé: " . $filePath);
+        error_log("URI demandée: " . $uri);
+        error_log("Chemin frontend: " . $frontendPath);
+        error_log("Chemin root: " . $rootPath);
         header("HTTP/1.0 404 Not Found");
         echo "Fichier non trouvé: " . htmlspecialchars($filePath);
         exit;
@@ -71,7 +72,7 @@ if (in_array($fileExtension, $staticExtensions)) {
 // ----------------------
 
 // Connexion à la base de données
-require_once 'config/database.php';
+require_once 'backend/config/database.php';
 
 // Récupérer les paramètres de routage
 $page = $_GET['page'] ?? 'home';
@@ -81,32 +82,32 @@ try {
     // Routage principal de l'application
     switch($page) {
         case 'home':
-            require_once 'app/Controllers/HomeController.php';
+            require_once 'backend/Controllers/HomeController.php';
             $controller = new HomeController();
             $controller->index();
             break;
             
         case 'login':
-            require_once 'app/Controllers/AuthController.php';
+            require_once 'backend/Controllers/AuthController.php';
             $controller = new AuthController();
             $controller->login();
             break;
             
         case 'register':
-            require_once 'app/Controllers/AuthController.php';
+            require_once 'backend/Controllers/AuthController.php';
             $controller = new AuthController();
             $controller->register();
             break;
             
         case 'logout':
-            require_once 'app/Controllers/AuthController.php';
+            require_once 'backend/Controllers/AuthController.php';
             $controller = new AuthController();
             $controller->logout();
             break;
             
         case 'admin':
-            require_once 'app/Middleware/AdminMiddleware.php';
-            require_once 'app/Controllers/AdminController.php';
+            require_once 'backend/Middleware/AdminMiddleware.php';
+            require_once 'backend/Controllers/AdminController.php';
             $middleware = new AdminMiddleware();
             if ($middleware->check()) {
                 $controller = new AdminController();
@@ -136,11 +137,26 @@ try {
                     case 'deletePlace':
                         $controller->deletePlace();
                         break;
+                    case 'confirmDeletePlace':
+                        $controller->confirmDeletePlace();
+                        break;
                     case 'refunds':
                         $controller->manageRefunds();
                         break;
                     case 'processRefund':
                         $controller->processRefund();
+                        break;
+                    case 'refundStats':
+                        $controller->refundStats();
+                        break;
+                    case 'tarifs':
+                        $controller->manageTarifs();
+                        break;
+                    case 'horaires':
+                        $controller->manageHoraires();
+                        break;
+                    case 'stats':
+                        $controller->getRealTimeStats();
                         break;
                     default:
                         $controller->index();
@@ -149,7 +165,7 @@ try {
             break;
             
         case 'parking':
-            require_once 'app/Controllers/ParkingController.php';
+            require_once 'backend/Controllers/ParkingController.php';
             $controller = new ParkingController();
             
             switch($action) {
@@ -165,7 +181,7 @@ try {
             break;
             
         case 'user':
-            require_once 'app/Controllers/UserController.php';
+            require_once 'backend/Controllers/UserController.php';
             $controller = new UserController();
             
             switch($action) {
@@ -197,7 +213,7 @@ try {
                     $controller->notifications();
                     break;
                 case 'mark_read':
-                    $controller->mark_read();
+                    $controller->markNotificationRead();
                     break;
                 case 'mark_all_read':
                     $controller->mark_all_read();
@@ -211,7 +227,7 @@ try {
             break;
             
         default:
-            require_once 'app/Views/404.php';
+            require_once 'frontend/Views/404.php';
     }
 } catch (Exception $e) {
     // Journaliser l'exception
@@ -219,5 +235,5 @@ try {
     
     // Afficher une page d'erreur
     $_SESSION['error'] = "Une erreur est survenue. Veuillez réessayer plus tard.";
-    require_once 'app/Views/error.php';
+    require_once 'frontend/Views/error.php';
 }
