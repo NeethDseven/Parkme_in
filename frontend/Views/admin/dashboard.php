@@ -67,25 +67,32 @@
     
     <div class="row">
         <div class="col-12">
-            <div class="card border-0 shadow-sm">
-                <div class="card-header bg-white py-3">
-                    <h5 class="mb-0">Actions rapides</h5>
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-cogs me-2"></i>Actions rapides
+                    </h5>
                 </div>
                 <div class="card-body">
                     <div class="row g-3">
-                        <div class="col-md-4">
-                            <a href="<?= BASE_URL ?>/?page=admin&action=users" class="btn btn-primary w-100 py-3">
-                                <i class="fas fa-users me-2"></i> Gérer les utilisateurs
+                        <div class="col-md-6">
+                            <a href="<?= BASE_URL ?>/?page=admin&action=places" class="btn btn-outline-primary w-100">
+                                <i class="fas fa-parking me-2"></i>Gérer les places
                             </a>
                         </div>
-                        <div class="col-md-4">
-                            <a href="<?= BASE_URL ?>/?page=admin&action=places" class="btn btn-success w-100 py-3">
-                                <i class="fas fa-parking me-2"></i> Gérer les places
+                        <div class="col-md-6">
+                            <a href="<?= BASE_URL ?>/?page=admin&action=users" class="btn btn-outline-primary w-100">
+                                <i class="fas fa-users me-2"></i>Gérer les utilisateurs
                             </a>
                         </div>
-                        <div class="col-md-4">
-                            <a href="<?= BASE_URL ?>/?page=admin&action=refunds" class="btn btn-info text-white w-100 py-3">
-                                <i class="fas fa-exchange-alt me-2"></i> Gérer les remboursements
+                        <div class="col-md-6">
+                            <a href="<?= BASE_URL ?>/?page=admin&action=refunds" class="btn btn-outline-primary w-100">
+                                <i class="fas fa-undo-alt me-2"></i>Gérer les remboursements
+                            </a>
+                        </div>
+                        <div class="col-md-6">
+                            <a href="<?= BASE_URL ?>/?page=admin&action=index&check_notifications=1" class="btn btn-outline-success w-100">
+                                <i class="fas fa-bell me-2"></i>Envoyer les notifications de début
                             </a>
                         </div>
                     </div>

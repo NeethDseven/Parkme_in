@@ -55,20 +55,4 @@
     </div>
 </div>
 
-<script>
-// Validation du formulaire côté client
-document.addEventListener('DOMContentLoaded', function() {
-    const form = document.querySelector('.needs-validation');
-    
-    form.addEventListener('submit', function(event) {
-        if (!form.checkValidity()) {
-            event.preventDefault();
-            event.stopPropagation();
-        }
-        
-        form.classList.add('was-validated');
-    }, false);
-});
-</script>
-
 <?php require_once 'frontend/Views/layouts/footer.php'; ?>

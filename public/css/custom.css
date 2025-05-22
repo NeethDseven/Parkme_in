@@ -1,0 +1,104 @@
+/* Styles globaux */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f4f7fa;
+    margin: 0;
+    padding: 0;
+    color: #333;
+}
+
+a {
+    color: #007bff;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+/* Styles pour le calendrier de réservation */
+.flatpickr-calendar {
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15);
+}
+
+.flatpickr-day.disabled {
+    color: #ccc;
+}
+
+.flatpickr-day.has-booking {
+    background-color: rgba(255, 0, 0, 0.15);
+    color: #999;
+    text-decoration: line-through;
+}
+
+.flatpickr-day.selected.has-booking {
+    background-color: #fd5c63;
+}
+
+.flatpickr-day.selected {
+    background-color: #28a745;
+    border-color: #28a745;
+}
+
+.flatpickr-day.selected:hover {
+    background-color: #218838;
+    border-color: #1e7e34;
+}
+
+/* Légende du calendrier */
+.legend {
+    display: flex;
+    align-items: center;
+    margin-top: 10px;
+    justify-content: center;
+}
+
+.legend-color {
+    width: 16px;
+    height: 16px;
+    border-radius: 3px;
+    margin-right: 8px;
+}
+
+.legend-text {
+    font-size: 0.9rem;
+    color: #666;
+}
+
+/* Styles pour les icônes de type de place */
+.place-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    margin-bottom: 1rem;
+}
+
+.place-icon.standard {
+    background-color: rgba(108, 117, 125, 0.2);
+    color: #6c757d;
+}
+
+.place-icon.handicape {
+    background-color: rgba(13, 110, 253, 0.2);
+    color: #0d6efd;
+}
+
+.place-icon.electrique {
+    background-color: rgba(25, 135, 84, 0.2);
+    color: #198754;
+}
+
+/* Animation pour les notifications */
+@keyframes fadeIn {
+    0% { opacity: 0; transform: translateY(-10px); }
+    100% { opacity: 1; transform: translateY(0); }
+}
+
+.alert {
+    animation: fadeIn 0.3s ease-out;
+}

@@ -1,9 +1,11 @@
-
-
 /* Variables personnalisées */
 :root {
   --primary-color: #3498db;
-  --secondary-color: #2c3e50;
+  --secondary-color: #2ecc71;
+  --warning-color: #f39c12;
+  --danger-color: #e74c3c;
+  --dark-color: #2c3e50;
+  --light-color: #ecf0f1;
   --light-gray: #f8f9fa;
   --medium-gray: #e9ecef;
   --dark-gray: #343a40;
@@ -73,6 +75,100 @@ header nav ul li a:focus::after {
   width: 100%;
 }
 
+/* Styles généraux */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    line-height: 1.6;
+    color: #333;
+    background-color: #f8f9fa;
+}
+
+/* Styles de navigation */
+.navbar-brand {
+    font-weight: 700;
+    font-size: 1.4rem;
+}
+
+.navbar-dark .navbar-nav .nav-link {
+    color: rgba(255, 255, 255, 0.85);
+}
+
+.navbar-dark .navbar-nav .nav-link:hover {
+    color: #fff;
+}
+
+/* Styles des cartes */
+.card {
+    border-radius: 0.5rem;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1) !important;
+}
+
+.card-header {
+    font-weight: 600;
+}
+
+/* Styles des badges */
+.badge {
+    padding: 0.4em 0.8em;
+    font-weight: 500;
+}
+
+/* Styles des listes */
+.list-group-item {
+    padding: 0.75rem 1.25rem;
+}
+
+/* Styles des boutons */
+.btn {
+    border-radius: 0.3rem;
+    font-weight: 500;
+    padding: 0.5rem 1rem;
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.btn-success {
+    background-color: var(--secondary-color);
+    border-color: var(--secondary-color);
+}
+
+/* Styles des formulaires */
+.form-control, .form-select {
+    border-radius: 0.3rem;
+    padding: 0.5rem 0.75rem;
+}
+
+/* Styles des alertes */
+.alert {
+    border-radius: 0.3rem;
+    font-weight: 500;
+}
+
+/* Styles des notifications */
+.position-relative .badge {
+    font-size: 0.7rem;
+    padding: 0.3em 0.6em;
+}
+
+#notification-badge {
+    transform: translate(-50%, -50%) !important;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+#notification-badge.visible {
+    opacity: 1;
+}
+
 /* Styles pour les places de parking */
 .parking-slot {
   padding: 20px;
@@ -96,7 +192,18 @@ header nav ul li a:focus::after {
   border-left: 4px solid #f39c12;
 }
 
-/* Notifications */
+/* Animation de notification */
+@keyframes notification-pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
+.notification-item.unread {
+    background-color: rgba(13, 110, 253, 0.05);
+    border-left: 3px solid var(--primary-color);
+}
+
 .notification-item {
   border-radius: 6px;
   padding: 15px;
@@ -113,14 +220,6 @@ header nav ul li a:focus::after {
 .notification-item .date {
   color: #888;
   font-size: 0.85rem;
-}
-
-/* Personnalisation des cards sans effets hover */
-.card {
-  border: none;
-  border-radius: 8px;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-  margin-bottom: 20px;
 }
 
 /* Style personnalisé pour les boutons d'action */
@@ -161,17 +260,140 @@ footer .border-top {
   min-height: calc(100vh - 200px);
 }
 
-/* Notifications badge */
-.notification-badge {
-  position: absolute;
-  top: -8px;
-  right: -8px;
-  background-color: #e74c3c;
-  color: white;
-  font-size: 0.75rem;
-  padding: 0.25rem 0.5rem;
-  border-radius: 1rem;
-  font-weight: 600;
+/* Styles pour les badges de notification */
+#notification-badge {
+    position: absolute;
+    top: 0;
+    right: 0;
+    transform: translate(25%, -25%);
+    font-size: 0.65rem;
+    padding: 0.25rem 0.4rem;
+    min-width: 1rem;
+    min-height: 1rem;
+    line-height: 1;
+    text-align: center;
+    border-radius: 50%;
+    transition: opacity 0.3s ease;
+    animation: notificationPulse 2s infinite;
+}
+
+#notification-badge.visible {
+    display: inline-block !important;
+    opacity: 1 !important;
+}
+
+#notification-badge:not(.visible) {
+    display: none !important;
+    opacity: 0 !important;
+}
+
+/* Animation de pulsation pour les notifications */
+@keyframes notificationPulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7);
+    }
+    70% {
+        box-shadow: 0 0 0 5px rgba(220, 53, 69, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(220, 53, 69, 0);
+    }
+}
+
+/* Classe visible pour garantir l'affichage du badge */
+#notification-badge.visible {
+    display: inline-block !important;
+    opacity: 1 !important;
+}
+
+/* Style pour les notifications */
+.notification-item {
+    padding: 15px;
+    border-bottom: 1px solid #e9ecef;
+    transition: background-color 0.3s ease;
+}
+
+.notification-item.unread {
+    background-color: rgba(52, 152, 219, 0.1);
+    border-left: 3px solid #3498db;
+}
+
+.notification-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 8px;
+}
+
+.notification-date {
+    font-size: 0.8rem;
+    color: #6c757d;
+}
+
+.notification-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 8px;
+}
+
+/* Styles pour les alertes de disponibilité */
+.btn-alert-disponibilite {
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    transition: all 0.3s ease;
+}
+
+.btn-alert-disponibilite:hover {
+    transform: scale(1.05);
+}
+
+.badge.bg-success {
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(25, 135, 84, 0.4);
+    }
+    70% {
+        box-shadow: 0 0 0 7px rgba(25, 135, 84, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(25, 135, 84, 0);
+    }
+}
+
+/* Styles spécifiques pour le calendrier de réservation */
+.reservation-calendar-container {
+    position: relative;
+    margin-bottom: 2rem;
+}
+
+#date_debut_display, #date_fin_display {
+    font-size: 1.1rem;
+}
+
+.legend {
+    display: flex;
+    align-items: center;
+    margin-right: 1rem;
+}
+
+.legend-color {
+    width: 15px;
+    height: 15px;
+    margin-right: 6px;
+    border-radius: 3px;
+}
+
+#reservation-error {
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 /* Media queries pour responsive */
@@ -183,4 +405,39 @@ footer .border-top {
   header .logo h1 {
     font-size: 1.25rem;
   }
+  
+    .navbar-brand {
+        font-size: 1.2rem;
+    }
+    
+    .card {
+        margin-bottom: 1rem;
+    }
+}
+
+/* Styles pour le bouton d'alerte automatique */
+#create-auto-alert {
+    margin-left: 10px;
+    transition: all 0.3s ease;
+}
+
+#create-auto-alert:hover {
+    background-color: #e0a800;
+    border-color: #d39e00;
+}
+
+/* Animation pour les alertes de disponibilité */
+.alert-success {
+    animation: fadeInAndSlide 0.5s ease-in-out;
+}
+
+@keyframes fadeInAndSlide {
+    0% {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }

@@ -13,24 +13,13 @@ class PaginationService {
      * @param int $currentPage Page actuelle (optionnel, par défaut: 1)
      */
     public function __construct($totalItems, $itemsPerPage, $currentPage = 1) {
-        $this->totalItems = (int)$totalItems;
-        $this->itemsPerPage = (int)$itemsPerPage;
-        $this->totalPages = ceil($this->totalItems / $this->itemsPerPage);
-        $this->currentPage = $this->validatePageNumber($currentPage);
-    }
-    
-    /**
-     * S'assure que le numéro de page est valide
-     */
-    private function validatePageNumber($page) {
-        $page = (int)$page;
-        if ($page < 1) {
-            return 1;
-        }
-        if ($page > $this->totalPages && $this->totalPages > 0) {
-            return $this->totalPages;
-        }
-        return $page;
+        $this->totalItems = max(0, (int)$totalItems);
+        $this->itemsPerPage = max(1, (int)$itemsPerPage);
+        $this->currentPage = max(1, (int)$currentPage);
+        $this->totalPages = max(1, ceil($this->totalItems / $this->itemsPerPage));
+        
+        // S'assurer que la page actuelle ne dépasse pas le nombre total de pages
+        $this->currentPage = min($this->currentPage, $this->totalPages);
     }
     
     /**
@@ -68,74 +57,51 @@ class PaginationService {
      * @param array $queryParams Paramètres additionnels à conserver dans l'URL
      * @return string HTML de la pagination
      */
-    public function createLinks($baseUrl, $queryParams = []) {
+    public function createLinks($baseUrl, $params = []) {
         if ($this->totalPages <= 1) {
             return '';
         }
         
-        $html = '<nav aria-label="Navigation des pages"><ul class="pagination">';
+        $links = '<ul class="pagination">';
         
-        // Lien précédent
+        // Bouton Précédent
         if ($this->currentPage > 1) {
-            $params = array_merge($queryParams, ['p' => $this->currentPage - 1]);
-            $prevUrl = $this->buildUrl($baseUrl, $params);
-            $html .= '<li class="page-item"><a class="page-link" href="' . $prevUrl . '" aria-label="Précédent">&laquo;</a></li>';
+            $prevParams = $params;
+            $prevParams['p'] = $this->currentPage - 1;
+            $queryString = http_build_query($prevParams);
+            $links .= '<li class="page-item"><a class="page-link" href="' . $baseUrl . '/?' . $queryString . '">&laquo; Précédent</a></li>';
         } else {
-            $html .= '<li class="page-item disabled"><span class="page-link">&laquo;</span></li>';
+            $links .= '<li class="page-item disabled"><span class="page-link">&laquo; Précédent</span></li>';
         }
         
-        // Liens des pages
-        $visiblePages = 5; // Nombre de pages visibles autour de la page courante
-        $halfVisible = floor($visiblePages / 2);
+        // Pages numérotées
+        $range = 2; // Nombre de pages à afficher de chaque côté de la page actuelle
         
-        $startPage = max(1, $this->currentPage - $halfVisible);
-        $endPage = min($this->totalPages, $startPage + $visiblePages - 1);
-        
-        if ($endPage - $startPage + 1 < $visiblePages) {
-            $startPage = max(1, $endPage - $visiblePages + 1);
-        }
-        
-        if ($startPage > 1) {
-            $params = array_merge($queryParams, ['p' => 1]);
-            $firstUrl = $this->buildUrl($baseUrl, $params);
-            $html .= '<li class="page-item"><a class="page-link" href="' . $firstUrl . '">1</a></li>';
-            if ($startPage > 2) {
-                $html .= '<li class="page-item disabled"><span class="page-link">...</span></li>';
-            }
-        }
-        
-        for ($i = $startPage; $i <= $endPage; $i++) {
-            $params = array_merge($queryParams, ['p' => $i]);
-            $pageUrl = $this->buildUrl($baseUrl, $params);
+        for ($i = max(1, $this->currentPage - $range); $i <= min($this->totalPages, $this->currentPage + $range); $i++) {
+            $pageParams = $params;
+            $pageParams['p'] = $i;
+            $queryString = http_build_query($pageParams);
             
             if ($i == $this->currentPage) {
-                $html .= '<li class="page-item active"><span class="page-link">' . $i . '</span></li>';
+                $links .= '<li class="page-item active"><span class="page-link">' . $i . '</span></li>';
             } else {
-                $html .= '<li class="page-item"><a class="page-link" href="' . $pageUrl . '">' . $i . '</a></li>';
+                $links .= '<li class="page-item"><a class="page-link" href="' . $baseUrl . '/?' . $queryString . '">' . $i . '</a></li>';
             }
         }
         
-        if ($endPage < $this->totalPages) {
-            if ($endPage < $this->totalPages - 1) {
-                $html .= '<li class="page-item disabled"><span class="page-link">...</span></li>';
-            }
-            $params = array_merge($queryParams, ['p' => $this->totalPages]);
-            $lastUrl = $this->buildUrl($baseUrl, $params);
-            $html .= '<li class="page-item"><a class="page-link" href="' . $lastUrl . '">' . $this->totalPages . '</a></li>';
-        }
-        
-        // Lien suivant
+        // Bouton Suivant
         if ($this->currentPage < $this->totalPages) {
-            $params = array_merge($queryParams, ['p' => $this->currentPage + 1]);
-            $nextUrl = $this->buildUrl($baseUrl, $params);
-            $html .= '<li class="page-item"><a class="page-link" href="' . $nextUrl . '" aria-label="Suivant">&raquo;</a></li>';
+            $nextParams = $params;
+            $nextParams['p'] = $this->currentPage + 1;
+            $queryString = http_build_query($nextParams);
+            $links .= '<li class="page-item"><a class="page-link" href="' . $baseUrl . '/?' . $queryString . '">Suivant &raquo;</a></li>';
         } else {
-            $html .= '<li class="page-item disabled"><span class="page-link">&raquo;</span></li>';
+            $links .= '<li class="page-item disabled"><span class="page-link">Suivant &raquo;</span></li>';
         }
         
-        $html .= '</ul></nav>';
+        $links .= '</ul>';
         
-        return $html;
+        return $links;
     }
     
     /**

@@ -1,184 +1,134 @@
-<?php $pageTitle = 'Mes réservations - Parkme In'; ?>
+<?php $pageTitle = 'Mes réservations'; ?>
 <?php require_once 'frontend/Views/layouts/header.php'; ?>
 
 <div class="container py-4">
     <h1 class="mb-4">Mes réservations</h1>
-
+    
     <?php if (empty($reservations)): ?>
-        <div class="alert alert-info mb-0">
+        <div class="alert alert-info">
             <i class="fas fa-info-circle me-2"></i>
-            Vous n'avez aucune réservation.
-        </div>
-        
-        <div class="mt-4">
-            <a href="<?= BASE_URL ?>/?page=parking&action=list" class="btn btn-primary">
-                <i class="fas fa-plus-circle me-2"></i>
-                Réserver une place
-            </a>
+            Vous n'avez aucune réservation. <a href="<?= BASE_URL ?>/?page=parking&action=list" class="alert-link">Cliquez ici</a> pour réserver une place de parking.
         </div>
     <?php else: ?>
-        <!-- Nav tabs -->
-        <ul class="nav nav-tabs mb-3" id="reservationTabs" role="tablist">
-            <li class="nav-item" role="presentation">
-                <button class="nav-link active" id="active-tab" data-bs-toggle="tab" data-bs-target="#active-content" 
-                        type="button" role="tab" aria-controls="active-content" aria-selected="true">
-                    Réservations actives
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="history-tab" data-bs-toggle="tab" data-bs-target="#history-content" 
-                        type="button" role="tab" aria-controls="history-content" aria-selected="false">
-                    Historique
-                </button>
-            </li>
-        </ul>
-
-        <!-- Tab content -->
-        <div class="tab-content">
-            <!-- Onglet réservations actives -->
-            <div class="tab-pane fade show active" id="active-content" role="tabpanel" aria-labelledby="active-tab">
-                <div class="card">
-                    <div class="card-header bg-white">
-                        <h5 class="card-title mb-0">Réservations actives</h5>
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h5 class="mb-0">Vos réservations</h5>
                     </div>
-                    <div class="card-body">
-                        <?php
-                        $hasActive = false;
-                        foreach($reservations as $reservation) {
-                            if ($reservation['status'] === 'confirmée') {
-                                $hasActive = true;
-                                break;
-                            }
-                        }
-                        ?>
-                        
-                        <?php if (!$hasActive): ?>
-                            <div class="alert alert-info">
-                                <i class="fas fa-info-circle me-2"></i>
-                                Vous n'avez aucune réservation active.
-                            </div>
-                        <?php else: ?>
-                            <div class="table-responsive">
-                                <table class="table table-hover">
-                                    <thead>
-                                        <tr>
-                                            <th>Place</th>
-                                            <th>Type</th>
-                                            <th>Date début</th>
-                                            <th>Date fin</th>
-                                            <th>Statut</th>
-                                            <th>Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <?php foreach($reservations as $reservation): ?>
-                                            <?php if ($reservation['status'] === 'confirmée'): ?>
-                                                <tr>
-                                                    <td><?= htmlspecialchars($reservation['place_numero']) ?></td>
-                                                    <td><?= htmlspecialchars($reservation['place_type']) ?></td>
-                                                    <td><?= date('d/m/Y H:i', strtotime($reservation['date_debut'])) ?></td>
-                                                    <td><?= date('d/m/Y H:i', strtotime($reservation['date_fin'])) ?></td>
-                                                    <td><span class="badge bg-success">
-                                                        <?= htmlspecialchars($reservation['status']) ?>
-                                                    </span></td>
-                                                    <td>
-                                                        <a href="<?= BASE_URL ?>/?page=user&action=cancelReservation&id=<?= $reservation['id'] ?>"
-                                                        onclick="return confirm('Voulez-vous annuler cette réservation ?')"
-                                                        class="btn btn-sm btn-danger">
-                                                            <i class="fas fa-times me-1"></i> Annuler
-                                                        </a>
-                                                        <a href="<?= BASE_URL ?>/?page=user&action=downloadReceipt&id=<?= $reservation['id'] ?>"
-                                                        class="btn btn-sm btn-primary">
-                                                            <i class="fas fa-file-pdf me-1"></i> PDF
-                                                        </a>
-                                                    </td>
-                                                </tr>
-                                            <?php endif; ?>
-                                        <?php endforeach; ?>
-                                    </tbody>
-                                </table>
-                            </div>
-                        <?php endif; ?>
+                    <div class="col-md-4 text-md-end">
+                        <a href="<?= BASE_URL ?>/?page=parking&action=list" class="btn btn-light btn-sm">
+                            <i class="fas fa-plus me-1"></i> Nouvelle réservation
+                        </a>
                     </div>
                 </div>
             </div>
-
-            <!-- Onglet historique des réservations -->
-            <div class="tab-pane fade" id="history-content" role="tabpanel" aria-labelledby="history-tab">
-                <div class="card">
-                    <div class="card-header bg-white">
-                        <h5 class="card-title mb-0">Historique des réservations</h5>
-                    </div>
-                    <div class="card-body">
-                        <?php
-                        $hasHistory = false;
-                        foreach($reservations as $reservation) {
-                            if ($reservation['status'] === 'annulée') {
-                                $hasHistory = true;
-                                break;
-                            }
-                        }
-                        ?>
-                        
-                        <?php if (!$hasHistory): ?>
-                            <div class="alert alert-info">
-                                <i class="fas fa-info-circle me-2"></i>
-                                Votre historique est vide.
-                            </div>
-                        <?php else: ?>
-                            <div class="table-responsive">
-                                <table class="table table-hover">
-                                    <thead>
-                                        <tr>
-                                            <th>Place</th>
-                                            <th>Type</th>
-                                            <th>Date début</th>
-                                            <th>Date fin</th>
-                                            <th>Statut</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <?php foreach($reservations as $reservation): ?>
-                                            <?php if ($reservation['status'] === 'annulée'): ?>
-                                                <tr>
-                                                    <td><?= htmlspecialchars($reservation['place_numero']) ?></td>
-                                                    <td><?= htmlspecialchars($reservation['place_type']) ?></td>
-                                                    <td><?= date('d/m/Y H:i', strtotime($reservation['date_debut'])) ?></td>
-                                                    <td><?= date('d/m/Y H:i', strtotime($reservation['date_fin'])) ?></td>
-                                                    <td><span class="badge bg-secondary">
-                                                        <?= htmlspecialchars($reservation['status']) ?>
-                                                    </span></td>
-                                                </tr>
+            <div class="table-responsive">
+                <table class="table table-hover reservation-table">
+                    <thead>
+                        <tr>
+                            <th>Place</th>
+                            <th>Type</th>
+                            <th>Début</th>
+                            <th>Fin</th>
+                            <th>Statut</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach($reservations as $reservation): ?>
+                            <tr class="<?= $reservation['status'] === 'annulée' ? 'table-secondary' : ($reservation['status'] === 'en_attente' ? 'table-warning' : '') ?>">
+                                <td><?= $reservation['place_numero'] ?></td>
+                                <td>
+                                    <span class="badge bg-<?= $reservation['place_type'] === 'standard' ? 'primary' : ($reservation['place_type'] === 'handicape' ? 'success' : 'warning') ?>">
+                                        <?= ucfirst($reservation['place_type']) ?>
+                                    </span>
+                                </td>
+                                <td><?= date('d/m/Y H:i', strtotime($reservation['date_debut'])) ?></td>
+                                <td><?= date('d/m/Y H:i', strtotime($reservation['date_fin'])) ?></td>
+                                <td>
+                                    <span class="badge bg-<?= $reservation['status'] === 'confirmée' ? 'success' : ($reservation['status'] === 'en_attente' ? 'warning' : 'secondary') ?>">
+                                        <?= $reservation['status'] === 'en_attente' ? 'En attente de paiement' : ucfirst($reservation['status']) ?>
+                                    </span>
+                                </td>
+                                <td>
+                                    <?php if($reservation['status'] === 'en_attente'): ?>
+                                        <div class="btn-group">
+                                            <a href="<?= BASE_URL ?>/?page=user&action=payment&reservation_id=<?= $reservation['id'] ?>" class="btn btn-sm btn-success">
+                                                <i class="fas fa-credit-card me-1"></i> Payer
+                                            </a>
+                                            <a href="#" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#cancelModal<?= $reservation['id'] ?>">
+                                                <i class="fas fa-times me-1"></i> Annuler
+                                            </a>
+                                        </div>
+                                    <?php elseif($reservation['status'] === 'confirmée' && strtotime($reservation['date_debut']) > time()): ?>
+                                        <a href="#" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#cancelModal<?= $reservation['id'] ?>">
+                                            <i class="fas fa-times me-1"></i> Annuler
+                                        </a>
+                                        
+                                        <a href="<?= BASE_URL ?>/?page=user&action=downloadReceipt&id=<?= $reservation['id'] ?>" class="btn btn-sm btn-outline-secondary" target="_blank">
+                                            <i class="fas fa-file-alt me-1"></i> Reçu
+                                        </a>
+                                    <?php elseif($reservation['status'] === 'confirmée'): ?>
+                                        <a href="<?= BASE_URL ?>/?page=user&action=downloadReceipt&id=<?= $reservation['id'] ?>" class="btn btn-sm btn-outline-secondary" target="_blank">
+                                            <i class="fas fa-file-alt me-1"></i> Reçu
+                                        </a>
+                                    <?php else: ?>
+                                        <span class="text-muted">-</span>
+                                    <?php endif; ?>
+                                </td>
+                            </tr>
+                            
+                            <!-- Modal d'annulation -->
+                            <div class="modal fade" id="cancelModal<?= $reservation['id'] ?>" tabindex="-1" aria-labelledby="cancelModalLabel<?= $reservation['id'] ?>" aria-hidden="true">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <div class="modal-header bg-danger text-white">
+                                            <h5 class="modal-title" id="cancelModalLabel<?= $reservation['id'] ?>">Confirmer l'annulation</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <p>Êtes-vous sûr de vouloir annuler votre réservation pour la place n°<?= $reservation['place_numero'] ?> du <?= date('d/m/Y H:i', strtotime($reservation['date_debut'])) ?> au <?= date('d/m/Y H:i', strtotime($reservation['date_fin'])) ?> ?</p>
+                                            <?php if($reservation['status'] === 'en_attente'): ?>
+                                                <div class="alert alert-info">
+                                                    <i class="fas fa-info-circle me-2"></i>
+                                                    Cette réservation n'a pas encore été payée et sera simplement supprimée.
+                                                </div>
+                                            <?php else: ?>
+                                                <p class="text-danger">Cette action ne peut pas être annulée. Un remboursement sera initié si applicable.</p>
                                             <?php endif; ?>
-                                        <?php endforeach; ?>
-                                    </tbody>
-                                </table>
+                                            <div class="alert alert-success">
+                                                <i class="fas fa-bell me-2"></i>
+                                                Les utilisateurs qui ont configuré des alertes pour ce créneau horaire seront automatiquement notifiés de la disponibilité.
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                                            <a href="<?= BASE_URL ?>/?page=user&action=cancelReservation&id=<?= $reservation['id'] ?>" class="btn btn-danger">Annuler la réservation</a>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                        <?php endif; ?>
-                    </div>
-                </div>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
             </div>
-        </div>
-
-        <div class="mt-4">
-            <a href="<?= BASE_URL ?>/?page=parking&action=list" class="btn btn-primary">
-                <i class="fas fa-plus-circle me-2"></i>
-                Réserver une place
-            </a>
         </div>
     <?php endif; ?>
 </div>
 
-<!-- Ajouter le script Bootstrap pour activer les onglets au bas de la page -->
-<script>
-    // Assurons-nous que le DOM est chargé
-    document.addEventListener('DOMContentLoaded', function() {
-        // Créer des instances d'onglets Bootstrap
-        var triggerTabList = [].slice.call(document.querySelectorAll('#reservationTabs button'))
-        triggerTabList.forEach(function(triggerEl) {
-            new bootstrap.Tab(triggerEl)
-        });
-    });
-</script>
+<style>
+    .reservation-table .badge {
+        font-size: 0.85rem;
+    }
+    
+    .table-warning {
+        --bs-table-accent-bg: rgba(255, 193, 7, 0.15);
+    }
+    
+    .btn-group .btn {
+        margin-right: 5px;
+    }
+</style>
 
 <?php require_once 'frontend/Views/layouts/footer.php'; ?>

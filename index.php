@@ -158,6 +158,9 @@ try {
                     case 'stats':
                         $controller->getRealTimeStats();
                         break;
+                    case 'changeStatus':
+                        $controller->changeStatus();
+                        break;
                     default:
                         $controller->index();
                 }
@@ -174,6 +177,12 @@ try {
                     break;
                 case 'view':
                     $controller->viewPlace();
+                    break;
+                case 'createAlert':
+                    $controller->createAlert();
+                    break;
+                case 'deleteAlert':
+                    $controller->deleteAlert();
                     break;
                 default:
                     $controller->listAvailable();
@@ -212,14 +221,26 @@ try {
                 case 'notifications':
                     $controller->notifications();
                     break;
-                case 'mark_read':
+                case 'markNotificationRead':  // Correspond exactement à la méthode dans le contrôleur
                     $controller->markNotificationRead();
                     break;
                 case 'mark_all_read':
                     $controller->mark_all_read();
                     break;
+                case 'check_notifications':
+                    $controller->check_notifications();
+                    break;
                 case 'profile':
                     $controller->profile();
+                    break;
+                case 'updateProfile':
+                    $controller->updateProfile();
+                    break;
+                case 'updatePassword':
+                    $controller->updatePassword();
+                    break;
+                case 'updateNotificationPreferences':
+                    $controller->updateNotificationPreferences();
                     break;
                 default:
                     $controller->dashboard();

@@ -69,6 +69,7 @@ CREATE TABLE remboursements (
     montant DECIMAL(10,2) NOT NULL,
     raison TEXT,
     status ENUM('en_cours', 'effectué', 'refusé') DEFAULT 'en_cours',
+    commentaire_admin TEXT,
     date_demande TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (paiement_id) REFERENCES paiements(id)
 );
@@ -98,6 +99,19 @@ CREATE TABLE horaires_ouverture (
     jour_semaine INT NOT NULL, -- 1=Lundi, 2=Mardi, etc.
     heure_ouverture TIME NOT NULL,
     heure_fermeture TIME NOT NULL
+);
+
+-- Table pour les alertes de disponibilité
+CREATE TABLE alertes_disponibilite (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT NOT NULL,
+    place_id INT NOT NULL,
+    date_debut DATETIME NOT NULL,
+    date_fin DATETIME NOT NULL,
+    statut ENUM('en_attente', 'notifiee', 'expiree') DEFAULT 'en_attente',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (place_id) REFERENCES parking_spaces(id)
 );
 
 -- Insertion des tarifs par défaut

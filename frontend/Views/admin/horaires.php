@@ -1,91 +1,117 @@
+<?php $pageTitle = 'Gestion des horaires - Administration'; ?>
 <?php require_once 'frontend/Views/layouts/header.php'; ?>
 
-<div class="admin-container">
-    <h1>Gestion des horaires d'ouverture</h1>
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Gestion des horaires d'ouverture</h1>
+        <a href="<?= BASE_URL ?>/?page=admin" class="btn btn-primary">
+            <i class="fas fa-arrow-left me-2"></i>Retour au tableau de bord
+        </a>
+    </div>
     
-    <?php if (isset($_SESSION['success'])): ?>
-        <div class="alert alert-success">
-            <?= htmlspecialchars($_SESSION['success']) ?>
-            <?php unset($_SESSION['success']); ?>
+    <div class="card shadow-sm">
+        <div class="card-header bg-light">
+            <h5 class="card-title mb-0">Horaires d'ouverture du parking</h5>
         </div>
-    <?php endif; ?>
-    
-    <?php if (isset($_SESSION['error'])): ?>
-        <div class="alert alert-danger">
-            <?= htmlspecialchars($_SESSION['error']) ?>
-            <?php unset($_SESSION['error']); ?>
-        </div>
-    <?php endif; ?>
-    
-    <table>
-        <thead>
-            <tr>
-                <th>Jour</th>
-                <th>Ouverture</th>
-                <th>Fermeture</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            <?php 
-            $jours = [
-                1 => 'Lundi',
-                2 => 'Mardi',
-                3 => 'Mercredi',
-                4 => 'Jeudi',
-                5 => 'Vendredi',
-                6 => 'Samedi',
-                7 => 'Dimanche'
-            ];
-            foreach ($horaires as $horaire): ?>
-                <tr>
-                    <td><?= $jours[$horaire['jour_semaine']] ?></td>
-                    <td><?= $horaire['heure_ouverture'] ?></td>
-                    <td><?= $horaire['heure_fermeture'] ?></td>
-                    <td>
-                        <button class="btn-primary" onclick="editHoraire(<?= $horaire['id'] ?>, <?= $horaire['jour_semaine'] ?>, '<?= $horaire['heure_ouverture'] ?>', '<?= $horaire['heure_fermeture'] ?>')">
-                            Modifier
-                        </button>
-                    </td>
-                </tr>
-            <?php endforeach; ?>
-        </tbody>
-    </table>
-    
-    <div id="edit-modal" class="modal">
-        <div class="modal-content">
-            <span class="close">&times;</span>
-            <h2>Modifier les horaires</h2>
-            <form method="POST" action="<?= BASE_URL ?>/?page=admin&action=manageHoraires">
-                <input type="hidden" name="jour_semaine" id="jour_semaine">
-                
-                <div class="form-group">
-                    <label>Heure d'ouverture</label>
-                    <input type="time" name="heure_ouverture" id="heure_ouverture" required>
+        <div class="card-body">
+            <form action="<?= BASE_URL ?>/?page=admin&action=horaires" method="post" class="needs-validation" novalidate>
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>Jour</th>
+                                <th>Ouverture</th>
+                                <th>Fermeture</th>
+                                <th>Durée</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php for ($jour = 1; $jour <= 7; $jour++): ?>
+                                <tr>
+                                    <td>
+                                        <strong><?= $joursNoms[$jour] ?></strong>
+                                    </td>
+                                    <td>
+                                        <input type="time" class="form-control" id="ouverture_<?= $jour ?>" 
+                                               name="ouverture_<?= $jour ?>" 
+                                               value="<?= $horairesByDay[$jour]['heure_ouverture'] ?? '08:00' ?>" 
+                                               required>
+                                        <div class="invalid-feedback">Heure d'ouverture requise</div>
+                                    </td>
+                                    <td>
+                                        <input type="time" class="form-control" id="fermeture_<?= $jour ?>" 
+                                               name="fermeture_<?= $jour ?>" 
+                                               value="<?= $horairesByDay[$jour]['heure_fermeture'] ?? '20:00' ?>" 
+                                               required>
+                                        <div class="invalid-feedback">Heure de fermeture requise</div>
+                                    </td>
+                                    <td>
+                                        <?php
+                                        $ouverture = strtotime($horairesByDay[$jour]['heure_ouverture'] ?? '08:00');
+                                        $fermeture = strtotime($horairesByDay[$jour]['heure_fermeture'] ?? '20:00');
+                                        $dureeHeures = round(($fermeture - $ouverture) / 3600, 1);
+                                        ?>
+                                        <span class="badge bg-info"><?= $dureeHeures ?> heures</span>
+                                    </td>
+                                </tr>
+                            <?php endfor; ?>
+                        </tbody>
+                    </table>
                 </div>
                 
-                <div class="form-group">
-                    <label>Heure de fermeture</label>
-                    <input type="time" name="heure_fermeture" id="heure_fermeture" required>
+                <div class="alert alert-info mt-3">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Les horaires d'ouverture définissent les périodes pendant lesquelles les clients peuvent réserver et accéder au parking.
                 </div>
                 
-                <button type="submit" class="btn-primary">Enregistrer</button>
+                <div class="d-grid gap-2 mt-3">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i>Enregistrer les horaires
+                    </button>
+                </div>
             </form>
         </div>
     </div>
-    
-    <script>
-        function editHoraire(id, jour, ouverture, fermeture) {
-            document.getElementById('jour_semaine').value = jour;
-            document.getElementById('heure_ouverture').value = ouverture;
-            document.getElementById('heure_fermeture').value = fermeture;
-            document.getElementById('edit-modal').style.display = 'block';
-        }
-        
-        document.querySelector('.close').addEventListener('click', function() {
-            document.getElementById('edit-modal').style.display = 'none';
-        });
-    </script>
 </div>
+
+<script>
+// Script pour calculer dynamiquement la durée
+document.addEventListener('DOMContentLoaded', function() {
+    for (let jour = 1; jour <= 7; jour++) {
+        const ouvertureInput = document.getElementById(`ouverture_${jour}`);
+        const fermetureInput = document.getElementById(`fermeture_${jour}`);
+        
+        if (ouvertureInput && fermetureInput) {
+            // Fonction pour mettre à jour la durée
+            const updateDuration = () => {
+                const ouverture = ouvertureInput.value;
+                const fermeture = fermetureInput.value;
+                
+                if (ouverture && fermeture) {
+                    const ouvertureTime = new Date(`2023-01-01T${ouverture}`);
+                    const fermetureTime = new Date(`2023-01-01T${fermeture}`);
+                    
+                    // Si fermeture est avant ouverture, on ajoute un jour
+                    if (fermetureTime <= ouvertureTime) {
+                        fermetureTime.setDate(fermetureTime.getDate() + 1);
+                    }
+                    
+                    const durationHours = (fermetureTime - ouvertureTime) / (1000 * 60 * 60);
+                    
+                    // Mettre à jour l'affichage
+                    const durationBadge = ouvertureInput.closest('tr').querySelector('.badge');
+                    if (durationBadge) {
+                        durationBadge.textContent = `${durationHours.toFixed(1)} heures`;
+                    }
+                }
+            };
+            
+            // Écouter les changements sur les champs d'heure
+            ouvertureInput.addEventListener('change', updateDuration);
+            fermetureInput.addEventListener('change', updateDuration);
+        }
+    }
+});
+</script>
 
 <?php require_once 'frontend/Views/layouts/footer.php'; ?>

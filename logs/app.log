@@ -1,3 +1,13 @@
 [2025-05-21 16:49:29] [INFO]: Status de place corrigé: A01 (occupée -> libre)
 [2025-05-21 16:49:29] [INFO]: Status de place corrigé: A10 (occupée -> libre)
 [2025-05-21 16:49:29] [INFO]: Status de place corrigé: H02 (occupée -> libre)
+[2025-05-22 15:11:52] [INFO]: Création d'alerte de disponibilité {"userId":4,"placeId":6,"dateDebut":"2025-05-23T15:11","dateFin":"2025-05-24T15:11"}
+[2025-05-22 15:12:20] [INFO]: Annulation de réservation {"reservationId":"29","placeId":6,"dateDebut":"2025-05-23 12:00:00","dateFin":"2025-05-24 12:00:00"}
+[2025-05-22 15:12:20] [INFO]: Vérification des alertes pour cancellation {"placeId":6,"dateDebut":"2025-05-23 12:00:00","dateFin":"2025-05-24 12:00:00"}
+[2025-05-22 15:12:20] [INFO]: Alertes trouvées: 1 {"placeId":6,"alertes":"[{\"id\":4,\"user_id\":4,\"place_id\":6,\"date_debut\":\"2025-05-23 15:11:00\",\"date_fin\":\"2025-05-24 15:11:00\",\"statut\":\"en_attente\",\"created_at\":\"2025-05-22 15:11:52\",\"numero\":\"A1\",\"email\":\"salu@gmail.com\",\"prenom\":\"sami\",\"nom\":\"labidi\"}]"}
+[2025-05-22 15:12:20] [INFO]: Notification envoyée à l'utilisateur {"userId":4,"alerteId":4,"placeNumero":"A1"}
+[2025-05-22 15:15:58] [INFO]: Vérification des alertes pour cancellation {"placeId":6,"dateDebut":"2025-05-23 12:00:00","dateFin":"2025-05-24 12:00:00"}
+[2025-05-22 15:15:58] [INFO]: Alertes trouvées: 0 {"placeId":6,"alertes":"[]"}
+[2025-05-22 15:16:00] [INFO]: Vérification des alertes pour cancellation {"placeId":6,"dateDebut":"2025-05-23 12:00:00","dateFin":"2025-05-24 12:00:00"}
+[2025-05-22 15:16:00] [INFO]: Alertes trouvées: 0 {"placeId":6,"alertes":"[]"}
+[2025-05-22 15:57:26] [INFO]: Vérification des réservations débutant dans les 30 prochaines minutes {"count":0}
